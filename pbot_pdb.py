@@ -13,7 +13,6 @@ import traceback
 # Where to log. Usually same as the client log. None indicates no logging.
 LOG_FN = os.path.join(os.path.dirname(__file__), 'ppdb.log')
 
-
 # TCP host.
 HOST = '127.0.0.1'
 
@@ -40,13 +39,6 @@ MDEL = '\n'
 #------------------------------------------------------------------------------
 #------------------------- Configuration end ----------------------------------
 #------------------------------------------------------------------------------
-
-
-
-#------------------------------------------------------------------------------
-def plugin_loaded():
-    '''Hello.'''
-    pass
 
 
 #------------------------------------------------------------------------------
@@ -147,7 +139,7 @@ class CommIf(object):
 
 
 #------------------------------------------------------------------------------
-class SbotPdb(pdb.Pdb):
+class PbotPdb(pdb.Pdb):
     '''Run pdb behind a blocking tcp server.'''
 
     def __init__(self):
@@ -258,56 +250,8 @@ def write_log(level, msg, tb=None):
 #------------------------------------------------------------------------------
 def breakpoint():
     '''Opens a remote PDB. See test_sbot_pdb.py.'''
-    spdb = SbotPdb()
-    spdb.breakpoint(sys._getframe().f_back)
+    ppdb = PbotPdb()
+    ppdb.breakpoint(sys._getframe().f_back)
 
 
 # write_log('DBG', 'sbot_pdb module loaded')
-
-
-#------------------------------------------------------------------------------
-#--------------------------- TODO this ----------------------------------------
-#------------------------------------------------------------------------------
-
-
-
-#-----------------------------------------------------------------------------------
-def excepthook(type, value, tb):
-    '''
-    Process unhandled exceptions. This catches for all current plugins and is mainly
-    used for debugging the sbot pantheon. Logs the full stack and pops up a message box
-    with summary.
-    '''
-
-    # Sometimes gets these on shutdown:
-
-    # FileNotFoundError '...Log\plugin_host-3.8-on_exit.log'
-    # if issubclass(type, FileNotFoundError) and 'plugin_host-3.8-on_exit.log' in str(value):
-    #     return
-
-    # This happens with hard shutdown of SbotPdb: BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError.
-    if issubclass(type, bdb.BdbQuit) or issubclass(type, ConnectionError):
-        return
-
-    # LSP is sometimes impolite when closing.
-    # 2024-10-03 13:03:31.177 ERR sbot_dev.py:384 Unhandled exception TypeError: 'NoneType' object is not iterable
-    # if type is TypeError and 'object is not iterable' in str(value):
-    #     return
-
-    # # Crude shutdown detection.
-    # if len(sublime.windows()) > 0:
-    #     msg = f'Unhandled exception {type.__name__}: {value}\nSee the log or ST console'
-    #     sc.error(msg, tb)
-
-
-    # Otherwise let nature take its course.
-    sys.__excepthook__(type, value, tb)
-
-
-#-----------------------------------------------------------------------------------
-#----------------------- Finish initialization -------------------------------------
-#-----------------------------------------------------------------------------------
-
-# Connect the last chance hook.
-sys.excepthook = excepthook
-

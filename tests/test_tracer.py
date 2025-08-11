@@ -1,16 +1,26 @@
 import sys
 import os
 import datetime
-# import importlib
+import importlib
 import unittest
 # from unittest.mock import MagicMock
 
 
 # Import the code under test.
-from .. import tracer as tr # TODO1
+# from .. import tracer as tr # TODO1
+
+
+my_dir = os.path.dirname(__file__)
+
+# Add source path to sys.
+src_dir = os.path.abspath(os.path.join(my_dir, '..'))
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir) # or? sys.path.append(path)
+
+import tracer as tr
 
 # Benign reload in case of edited.
-# importlib.reload(tr)
+importlib.reload(tr)
 
 
 # Some optional shorthand.

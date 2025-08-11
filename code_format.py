@@ -5,10 +5,6 @@ import enum
 import json
 import xml
 import xml.dom.minidom
-try:
-    from . import LuaFormat # normal import TODO1??? all these
-except:
-    import LuaFormat # unittest import
 
 
 #-----------------------------------------------------------------------------------
@@ -148,7 +144,7 @@ def format_json(s):
 
 
 #-----------------------------------------------------------------------------------
-def format_xml(s, sindent):
+def format_xml(s, indent):
     ''' Clean and format the string. Returns the new string. '''
 
     def clean(node):
@@ -163,6 +159,7 @@ def format_xml(s, sindent):
         top = xml.dom.minidom.parseString(s)
         clean(top)  
         top.normalize()
+        sindent = ' ' * int(indent)
         ret = top.toprettyxml(indent=sindent)
     except Exception as e:
         ret = f"Error: {e}"

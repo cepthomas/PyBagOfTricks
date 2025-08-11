@@ -14,7 +14,7 @@ Python odds and ends. Mainly to support Sublime Text plugins.
 
 
 
-- Really, python is a horrible mess. https://xkcd.com/1987.
+- Really, python is a mess. https://xkcd.com/1987.
 
 
 
@@ -107,7 +107,7 @@ Note that sublime is blocked while running the debugger so you can't edit files 
   You may have to resort to *another editor!*.
 
 
-# SbotFormat
+# SbotFormat ======================
 
 Sublime Text plugin to do simple formatting of common source code files. Doesn't replace the existing file,
 shows the content in a new view.
@@ -156,4 +156,21 @@ Add the commands you like to your own `User\Context.sublime-menu` file. Typical 
 - `sbot_common.py` contains miscellaneous common components primarily for internal use by the sbot family.
   This includes a very simple logger primarily for user-facing information, syntax errors and the like.
   Log file is in `<ST_PACKAGES_DIR>\User\SbotFormat\SbotFormat.log`.
+
+
+## ==========================================================================
+
+# Add path to sys if not there yet.
+def add_py_path(path):
+    if path not in sys.path:
+        sys.path.insert(0, path) # or? sys.path.append(path)
+# or?? pathlib.Path(_store_path).mkdir(parents=True, exist_ok=True)
+
+        # Provide python path for the module under test.
+        src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        add_py_path(src_dir)
+
+
+        src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        add_py_path(src_dir)
 

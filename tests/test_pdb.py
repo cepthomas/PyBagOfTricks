@@ -5,49 +5,35 @@ import unittest
 # import platform
 import traceback
 import datetime
-# import importlib
+import importlib
 import bdb
 
-# try:
-#     from . import sbot_common as sc  # normal import
-# except:
-#     import sbot_common as sc  # unittest import
-
-
-# Benign reload in case of edited.
-# importlib.reload(sc)
-
 
 #-----------------------------------------------------------------------------------
-# Clean dump file.
-# _dump_fn = os.path.join(os.path.dirname(__file__), 'out', '_dump.log')
-# try:
-#     os.remove(_dump_fn)
-# except:
-#     pass    
+my_dir = os.path.dirname(__file__)
 
-# # Write to dump file.
-# def _dump(txt):
-#     with open(_dump_fn, 'a') as f:
-#         f.write(txt + '\n')
-#         f.flush()
+# Add source path to sys.
+src_dir = os.path.abspath(os.path.join(my_dir, '..'))
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir) # or? sys.path.append(path)
 
+# Reset dump file.
+dump_fn = os.path.join(my_dir, 'out', 'dump.log')
+try:
+    os.remove(dump_fn)
+except:
+    pass    
 
-def add_py_path(dir):
-    if dir not in sys.path:
-        sys.path.insert(0, dir)
-# or?       sys.path.append(dir)
-
-# or?? # Now make the useful filenames. Ensure store path exists.
-# _store_path = os.path.join(sublime.packages_path(), 'User', config.friendly_name)
-# pathlib.Path(_store_path).mkdir(parents=True, exist_ok=True)
-
-
+# Write to dump file.
+def dump(txt):
+    with open(dump_fn, 'a') as f:
+        f.write(txt + '\n')
+        f.flush()
 
 
 #-----------------------------------------------------------------------------------
 
-class TestPdb(unittest.TestCase):
+class TestPbotPdb(unittest.TestCase):
 
     def setUp(self):
         pass
@@ -59,15 +45,9 @@ class TestPdb(unittest.TestCase):
     # ------- was SbotRunPdbCommand():
     def doit_happy(self): 
 
-        # TEST_OUT_PATH = os.path.join(os.path.dirname(__file__), 'out')
-        # TODO1 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'Common'))
-        # import Common
-
-        src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        add_py_path(src_dir)
-
         # Set a breakpoint here then step through and examine the code.
-        from . import sbot_pdb; sbot_pdb.breakpoint()
+        # from . import pbot_pdb; pbot_pdb.breakpoint()
+        import pbot_pdb; pbot_pdb.breakpoint()
 
         ret = self.function_1(911, 'abcd')
         print('ret:', ret)
@@ -106,17 +86,17 @@ class TestPdb(unittest.TestCase):
         # i = 222 / 0
 
 
-        # _dump('====== Dump a stack - most recent last')
+        # dump('====== Dump a stack - most recent last')
         # for f in traceback.extract_stack():
-        #     _dump(_frame_formatter(f))
+        #     dump(_frame_formatter(f))
 
 
-        # _dump('====== Dump a traceback - most recent last')
+        # dump('====== Dump a traceback - most recent last')
         # try:
         #     x = 1 / 0
         # except Exception as e:
         #     for f in traceback.extract_tb(e.__traceback__):
-        #         _dump(_frame_formatter(f))
+        #         dump(_frame_formatter(f))
 
 
         # '''
@@ -155,9 +135,6 @@ class TestPdb_fromST(unittest.TestCase):
     #-----------------------------------------------------------------------------------
     # ------- was SbotRunPdbCommand():
     def doit_woo(self):
-
-        src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        add_py_path(src_dir)
 
         # Set a breakpoint here then step through and examine the code.
         # from . import sbot_pdb;
@@ -218,10 +195,10 @@ def do_a_suite(alpha, number):
     '''Main code.'''
 
     # Benign reload in case of being edited.
-    importlib.reload(sbot_pdb)
+    importlib.reload(pbot_pdb)
 
     # Set a breakpoint here then step through and examine the code.
-    sbot_pdb.breakpoint()
+    pbot_pdb.breakpoint()
 
     ret = function_1(number, len(alpha))
 
