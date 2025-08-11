@@ -6,11 +6,8 @@ import unittest
 # from unittest.mock import MagicMock
 
 
-# # Set up the sublime emulation environment.
-# import emu_sublime_api as emu
-
 # Import the code under test.
-from .. import tracer as tr
+from .. import tracer as tr # TODO1
 
 # Benign reload in case of edited.
 # importlib.reload(tr)

@@ -20,18 +20,27 @@ import bdb
 
 #-----------------------------------------------------------------------------------
 # Clean dump file.
-_dump_fn = os.path.join(os.path.dirname(__file__), 'out', '_dump.log')
-try:
-    os.remove(_dump_fn)
-except:
-    pass    
+# _dump_fn = os.path.join(os.path.dirname(__file__), 'out', '_dump.log')
+# try:
+#     os.remove(_dump_fn)
+# except:
+#     pass    
 
-# Write to dump file.
-def _dump(txt):
-    with open(_dump_fn, 'a') as f:
-        f.write(txt + '\n')
-        f.flush()
+# # Write to dump file.
+# def _dump(txt):
+#     with open(_dump_fn, 'a') as f:
+#         f.write(txt + '\n')
+#         f.flush()
 
+
+def add_py_path(dir):
+    if dir not in sys.path:
+        sys.path.insert(0, dir)
+# or?       sys.path.append(dir)
+
+# or?? # Now make the useful filenames. Ensure store path exists.
+# _store_path = os.path.join(sublime.packages_path(), 'User', config.friendly_name)
+# pathlib.Path(_store_path).mkdir(parents=True, exist_ok=True)
 
 
 
@@ -47,13 +56,15 @@ class TestPdb(unittest.TestCase):
         pass
 
     #-----------------------------------------------------------------------------------
-    # ------- class SbotRunPdbCommand():
-    def doit1(self): 
+    # ------- was SbotRunPdbCommand():
+    def doit_happy(self): 
 
         # TEST_OUT_PATH = os.path.join(os.path.dirname(__file__), 'out')
-        # import sys, os
         # TODO1 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'Common'))
         # import Common
+
+        src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        add_py_path(src_dir)
 
         # Set a breakpoint here then step through and examine the code.
         from . import sbot_pdb; sbot_pdb.breakpoint()
@@ -85,8 +96,8 @@ class TestPdb(unittest.TestCase):
 
 
     #-----------------------------------------------------------------------------------
-    # ------- class SbotDebugCommand():
-    def doit2(self):
+    # ------- TODO1 was SbotDebugCommand():
+    def doit_boom(self):
         pass
 
         # Blow stuff up. Force unhandled exception.
@@ -122,96 +133,6 @@ class TestPdb(unittest.TestCase):
         # new_view = sc.create_new_view(self.view.window(), '\n'.join(text))
 
 
-#-----------------------------------------------------------------------------------
-def _frame_formatter(frame, stkpos=-1):
-    if stkpos >= 0:
-        # extra info please
-        s = f'stkpos:{stkpos} file:{frame.filename} func:{frame.name} lineno:{frame.lineno} line:{frame.line}'
-    else:
-        s = f'file:{frame.filename} func:{frame.name} lineno:{frame.lineno} line:{frame.line}'
-    # Other frame.f_code attributes:
-    # co_filename, co_firstlineno, co_argcount, co_name, co_varnames, co_consts, co_names
-    # co_cellvars, co_freevars, co_kwonlyargcount, co_posonlyargcount, co_nlocals, co_stacksize
-    return s
-
-
-#-----------------------------------------------------------------------------------
-def _dump_stack(stkpos=1):
-    # Default is caller frame -> 1.
-
-    buff = []
-
-    # tb => traceback object.
-    # limit => Print up to limit stack trace entries (starting from the invocation point) if limit is positive.
-    #   Otherwise, print the last abs(limit) entries. If limit is omitted or None, all entries are printed.
-    # f => optional argument can be used to specify an alternate stack frame to start. Otherwise uses current.
-    # FrameSummary attributes of interest: 'filename', 'line', 'lineno', 'locals', 'name'.
-
-    # [FrameSummary] traceback.extract_tb(tb, limit=None)  Useful for alternate formatting of stack traces.
-    # [FrameSummary] traceback.extract_stack(f=None, limit=None)  Extract the raw traceback from the current stack frame.
-    # [string] traceback.format_list([FrameSummary])  Kind of ugly printable format with dangling newlines.
-    # [string] traceback.format_tb(tb, limit=None)  A shorthand for format_list(extract_tb(tb, limit)).
-    # [string] traceback.format_stack(f=None, limit=None)  A shorthand for format_list(extract_stack(f, limit)).
-
-    # Get most recent frame => traceback.extract_tb(tb)[:-1], traceback.extract_stack()[:-1]
-
-    # try:
-    #     while True:
-    #         frame = sys._getframe(stkpos)  ??? this doesn't work any more
-    #         buff.append(f'{_frame_formatter(frame, stkpos)}')
-    #         stkpos += 1
-    # except:
-    #     # End of stack.
-    #     pass
-
-
-    for frame in traceback.extract_stack():
-        buff.append(f'{_frame_formatter(frame)}')
-
-    return buff
-
-
-#-----------------------------------------------------------------------------------
-def excepthook(type, value, tb):
-    '''
-    Process unhandled exceptions. This catches for all current plugins and is mainly
-    used for debugging the sbot pantheon. Logs the full stack and pops up a message box
-    with summary.
-    '''
-
-    # Sometimes gets these on shutdown:
-
-    # FileNotFoundError '...Log\plugin_host-3.8-on_exit.log'
-    # if issubclass(type, FileNotFoundError) and 'plugin_host-3.8-on_exit.log' in str(value):
-    #     return
-
-    # This happens with hard shutdown of SbotPdb: BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError.
-    if issubclass(type, bdb.BdbQuit) or issubclass(type, ConnectionError):
-        return
-
-    # LSP is sometimes impolite when closing.
-    # 2024-10-03 13:03:31.177 ERR sbot_dev.py:384 Unhandled exception TypeError: 'NoneType' object is not iterable
-    # if type is TypeError and 'object is not iterable' in str(value):
-    #     return
-
-    # # Crude shutdown detection.
-    # if len(sublime.windows()) > 0:
-    #     msg = f'Unhandled exception {type.__name__}: {value}\nSee the log or ST console'
-    #     sc.error(msg, tb)
-
-
-    # Otherwise let nature take its course.
-    sys.__excepthook__(type, value, tb)
-
-
-#-----------------------------------------------------------------------------------
-#----------------------- Finish initialization -------------------------------------
-#-----------------------------------------------------------------------------------
-
-# Connect the last chance hook.
-sys.excepthook = excepthook
-
-
 
 
 
@@ -220,14 +141,30 @@ sys.excepthook = excepthook
 #-----------------------------------------------------------------------------------
 
 
-#-----------------------------------------------------------------------------------
-class SbotPdbExampleCommand():
-    '''Run the plugin from a menu item.'''
 
-    def run(self, edit):
-        del edit
+#-----------------------------------------------------------------------------------
+
+class TestPdb_fromST(unittest.TestCase):
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    #-----------------------------------------------------------------------------------
+    # ------- was SbotRunPdbCommand():
+    def doit_woo(self):
+
+        src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        add_py_path(src_dir)
+
+        # Set a breakpoint here then step through and examine the code.
+        # from . import sbot_pdb;
+
         # Benign reload in case of being edited.
-#        importlib.reload(sbot_pdb)
+        # importlib.reload(sbot_pdb)
+
         # Run the code under debug.
         ret = do_a_suite(number=911, alpha='abcd')
         print('ret:', ret)
@@ -279,6 +216,9 @@ def function_boom():
 #----------------------------------------------------------
 def do_a_suite(alpha, number):
     '''Main code.'''
+
+    # Benign reload in case of being edited.
+    importlib.reload(sbot_pdb)
 
     # Set a breakpoint here then step through and examine the code.
     sbot_pdb.breakpoint()
