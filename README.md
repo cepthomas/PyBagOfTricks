@@ -91,7 +91,7 @@ A `sublime-settings` file doesn't make sense for this plugin. Settings are hard-
 Because of the nature of remote debugging, issuing a `q(uit)` command instead of `c(ont)` causes
   an unhandled `BdbQuit` [exception](https://stackoverflow.com/a/34936583).
   Similarly, unhandled `ConnectionError` can occur. They are harmless but if it annoys you,
-  add (or edit) this code somewhere in your plugins:
+  add (or edit) this code somewhere in your plugin:
 ```python
 import bdb
 def excepthook(type, value, tb):
@@ -115,7 +115,6 @@ shows the content in a new view.
 - Prettify json, turns C/C++ style comments into valid json elements, and removes trailing commas.
 - Prettify xml.
 - Prettify C family (C/C++/C#) files using [AStyle](https://astyle.sourceforge.net/) (which must be installed and in your path). Note: I started with the python astyle module but didn't care for it.
-- Prettify lua - uses main code from [LuaFormat](https://github.com/floydawong/LuaFormat) (MIT license). Gets a bit confused sometimes.
 
 **NOTE:** LSP works much better for json and lua and should be preferred. Keeping this code here for now.
 

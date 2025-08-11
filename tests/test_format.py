@@ -1,22 +1,16 @@
 import sys
 import os
 import unittest
-from unittest.mock import MagicMock
+# from unittest.mock import MagicMock
 
-# Set up the sublime emulation environment.
-import emu_sublime_api as emu
-
-# Import the code under test.
-import sbot_format
-# import sbot_common as sc
 
 
 #-----------------------------------------------------------------------------------
-class TestFormat(unittest.TestCase):  # TEST more tests
+class TestFormat(unittest.TestCase): 
 
     def setUp(self):
         
-        self.my_dir = os.path.dirname(__file__)
+        self.my_dir = os.path.dirname(__file__) # TODO1 
 
         # mock_settings = {
         #     "tab_size": 4,
@@ -29,7 +23,6 @@ class TestFormat(unittest.TestCase):  # TEST more tests
 
     #------------------------------------------------------------
     def test_format_json(self):
-        v = emu.View(601)
 
         fn = os.path.join(self.my_dir, 'messy.json')
         with open(f'{fn}', 'r') as fp:
@@ -65,3 +58,6 @@ class TestFormat(unittest.TestCase):  # TEST more tests
             s = s.replace('ColumnType=', '')
             res = cmd._do_one(s, '    ')
             self.assertEqual(res, "Error: not well-formed (invalid token): line 6, column 4")
+
+
+# TODO1 test CX

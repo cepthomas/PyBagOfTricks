@@ -6,7 +6,7 @@ import json
 import xml
 import xml.dom.minidom
 try:
-    from . import LuaFormat # normal import
+    from . import LuaFormat # normal import TODO1??? all these
 except:
     import LuaFormat # unittest import
 
@@ -188,12 +188,3 @@ def format_cx(s, syntax, indent):
 
     return sout
 
-
-#-----------------------------------------------------------------------------------
-def format_lua(s, indent):
-    ''' Clean and format lua string. Returns the new string. '''
-
-    lines = s.splitlines()
-    sout = LuaFormat.lua_format(lines, indent)
-
-    return sout
