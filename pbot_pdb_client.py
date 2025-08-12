@@ -13,7 +13,7 @@ import traceback
 #------------------------------------------------------------------------------
 
 # Where to log. Usually same as the server log. None indicates no logging.
-LOG_FN = os.path.join(os.path.dirname(__file__), 'ppdb.log') TODOX
+LOG_FN = os.path.join(os.path.dirname(__file__), 'ppdb.log')
 
 # TCP host.
 HOST = '127.0.0.1'
@@ -236,5 +236,5 @@ class PbotPdbClient(object):
 #------------------------------------------------------------------------------
 if __name__ == '__main__':
 
-    client = PdbClient()
+    client = PbotPdbClient()
     client.go()

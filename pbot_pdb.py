@@ -11,7 +11,7 @@ import traceback
 #------------------------------------------------------------------------------
 
 # Where to log. Usually same as the client log. None indicates no logging.
-LOG_FN = os.path.join(os.path.dirname(__file__), 'ppdb.log') TODOX
+LOG_FN = os.path.join(os.path.dirname(__file__), 'ppdb.log')
 
 # TCP host.
 HOST = '127.0.0.1'
@@ -164,7 +164,7 @@ class PbotPdb(pdb.Pdb):
             self.do_info(f'Server accepted connection from {repr(address)}.')
             self.commif = CommIf(conn)
             super().__init__(completekey='tab', stdin=self.commif, stdout=self.commif)  # pyright: ignore
-            SbotPdb.active_instance = self
+            PbotPdb.active_instance = self
 
         except (ConnectionError, socket.timeout) as e:
             self.do_info(f'Server connection timed out, try again: {str(e)}')
@@ -201,7 +201,7 @@ class PbotPdb(pdb.Pdb):
             self.sock.close()
             self.sock = None
 
-        SbotPdb.active_instance = None
+        PbotPdb.active_instance = None
 
         try:
             super().do_quit(arg)

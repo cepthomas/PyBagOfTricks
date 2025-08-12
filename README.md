@@ -18,7 +18,7 @@ Python odds and ends. Mainly to support Sublime Text plugins.
 
 
 
-# Plugin Pdb ==== TODO1 some of this here, some in sbot_dev ======
+# Plugin Pdb ==== TODO1 
 
 Sublime Text plugin for debugging ST plugins using pdb remotely over a tcp
 connection. There are other remote pdb projects but this specifically supports
