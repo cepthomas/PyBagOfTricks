@@ -7,29 +7,40 @@ import traceback
 import datetime
 import importlib
 import bdb
+import utils
 
 
 #-----------------------------------------------------------------------------------
 my_dir = os.path.dirname(__file__)
-
 # Add source path to sys.
-src_dir = os.path.abspath(os.path.join(my_dir, '..'))
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir) # or? sys.path.append(path)
+utils.ensure_import(my_dir, '..')
+# OK to import now.
+import pbot_pdb
+# # Benign reload in case of edited.
+# importlib.reload(pbot_pdb)
 
-# Reset dump file.
-dump_fn = os.path.join(my_dir, 'out', 'dump.log')
-try:
-    os.remove(dump_fn)
-except:
-    pass    
 
-# Write to dump file.
-def dump(txt):
-    with open(dump_fn, 'a') as f:
-        f.write(txt + '\n')
-        f.flush()
+# #-----------------------------------------------------------------------------------
+# my_dir = os.path.dirname(__file__)
 
+# # Add source path to sys.
+# src_dir = os.path.abspath(os.path.join(my_dir, '..'))
+# if src_dir not in sys.path:
+#     sys.path.insert(0, src_dir) # or? sys.path.append(path)
+
+# # Reset dump file.
+# dump_fn = os.path.join(my_dir, 'out', 'dump.log')
+# try:
+#     os.remove(dump_fn)
+# except:
+#     pass    
+
+# # Write to dump file.
+# def dump(txt):
+#     with open(dump_fn, 'a') as f:
+#         f.write(txt + '\n')
+#         f.flush()
+ TODOX
 
 #-----------------------------------------------------------------------------------
 
@@ -43,7 +54,7 @@ class TestPbotPdb(unittest.TestCase):
 
     #-----------------------------------------------------------------------------------
     # ------- was SbotRunPdbCommand():
-    def doit_happy(self): 
+    def test_happy(self): 
 
         # Set a breakpoint here then step through and examine the code.
         # from . import pbot_pdb; pbot_pdb.breakpoint()
@@ -77,7 +88,7 @@ class TestPbotPdb(unittest.TestCase):
 
     #-----------------------------------------------------------------------------------
     # ------- TODO1 was SbotDebugCommand():
-    def doit_boom(self):
+    def test_boom(self):
         pass
 
         # Blow stuff up. Force unhandled exception.
@@ -134,7 +145,7 @@ class TestPdb_fromST(unittest.TestCase):
 
     #-----------------------------------------------------------------------------------
     # ------- was SbotRunPdbCommand():
-    def doit_woo(self):
+    def test_woo(self):
 
         # Set a breakpoint here then step through and examine the code.
         # from . import sbot_pdb;

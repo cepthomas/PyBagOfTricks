@@ -3,24 +3,15 @@ import os
 import datetime
 import importlib
 import unittest
-# from unittest.mock import MagicMock
-
-
-# Import the code under test.
-# from .. import tracer as tr # TODO1
-
+import utils
 
 my_dir = os.path.dirname(__file__)
-
 # Add source path to sys.
-src_dir = os.path.abspath(os.path.join(my_dir, '..'))
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir) # or? sys.path.append(path)
-
+utils.ensure_import(my_dir, '..')
+# OK to import now.
 import tracer as tr
-
-# Benign reload in case of edited.
-importlib.reload(tr)
+# # Benign reload in case of edited.
+# importlib.reload(tr)
 
 
 # Some optional shorthand.
@@ -29,15 +20,14 @@ A = tr.A
 T = tr.T
 
 
-#------------------------ Dummy test objects ------------------------------------------
-
-class TracerExample(object):
+#------------------------ Dummy test object ------------------------------------------
+class ExampleClass(object):
     ''' Class function tracing.'''
 
     # Note: don't use @trfunc on constructor!
     def __init__(self, name, tags, arg):
         '''Construction.'''
-        T('making one TracerExample', name, tags, arg)
+        T('making one ExampleClass', name, tags, arg)
         self._name = name
         self._tags = tags
         self._arg = arg
@@ -60,23 +50,25 @@ class TracerExample(object):
 
     def __str__(self):
         '''Required for readable trace.'''
-        s = f'TracerExample:{self._name} tags:{self._tags} arg:{self._arg}'
+        s = f'ExampleClass:{self._name} tags:{self._tags} arg:{self._arg}'
         return s
 
+
+#------------------------ Test functions ------------------------------------------
 def no_trfunc_function(s):
     '''Entry/exit is not traced but explicit traces are ok.'''
     T(f'I still can do this => "{s}"')
 
 @trfunc
-def another_test_function(a_list, a_dict):
+def another_function(a_list, a_dict):
     '''Entry/exit is traced with args and return value.'''
     return len(a_list) + len(a_dict)
 
 @trfunc
-def a_test_function(a1: int, a2: float):
+def one_function(a1: int, a2: float):
     '''Entry/exit is traced with args and return value.'''
-    cl1 = TracerExample('number 1', [45, 78, 23], a1)
-    cl2 = TracerExample('number 2', [100, 101, 102], a2)
+    cl1 = ExampleClass('number 1', [45, 78, 23], a1)
+    cl2 = ExampleClass('number 2', [100, 101, 102], a2)
     T(cl1)
     T(cl2)
     ret = f'answer is cl1:{cl1.do_something(a1)}...cl2:{cl2.do_something(a2)}'
@@ -87,13 +79,13 @@ def a_test_function(a1: int, a2: float):
     return ret
 
 @trfunc
-def test_exception_function():
+def exception_function():
     '''Cause exception and handling.'''
     i = 0
     return 1 / i
 
 @trfunc
-def test_assert_function():
+def assert_function():
     '''Assert processing.'''
     i = 10
     j = 10
@@ -107,19 +99,19 @@ def do_a_suite(alpha, number):
     '''Make a nice suite with entry/exit and return value.'''
     T('something sweet')
 
-    ret = a_test_function(5, 9.126)
+    ret = one_function(5, 9.126)
 
-    test_exception_function()
+    exception_function()
 
-    test_assert_function()
+    assert_function()
 
     no_trfunc_function('can you see me?')
-    ret = another_test_function([33, 'tyu', 3.56], {'aaa': 111, 'bbb': 222, 'ccc': 333})
+    # ret = another_function([33, 'tyu', 3.56], {'aaa': 111, 'bbb': 222, 'ccc': 333})
+    ret = another_function([33, 'tyu', 3.56], {'aaa': number, alpha: 222, 'ccc': 333})
     return ret
 
 
 #-----------------------------------------------------------------------------------
-
 class TestTracer(unittest.TestCase):
 
     def setUp(self):
@@ -129,7 +121,7 @@ class TestTracer(unittest.TestCase):
         pass
 
     def test_success(self):
-        trace_fn = os.path.join(os.path.dirname(__file__), 'out', '_tracer.log')
+        trace_fn = os.path.join(my_dir, 'out', 'tracer.log')
         tr.start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')'))
 
         T(f'Start {do_a_suite.__name__}:{do_a_suite.__doc__} {datetime.datetime.now()}')

@@ -1,17 +1,17 @@
 import sys
 import os
 import unittest
-# from unittest.mock import MagicMock
-import code_format
+import utils
 
 
 #-----------------------------------------------------------------------------------
 my_dir = os.path.dirname(__file__)
-
 # Add source path to sys.
-src_dir = os.path.abspath(os.path.join(my_dir, '..'))
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir) # or? sys.path.append(path)
+utils.ensure_import(my_dir, '..')
+# OK to import now.
+import code_format
+# # Benign reload in case of edited.
+# importlib.reload(tr)
 
 
 #-----------------------------------------------------------------------------------
@@ -31,8 +31,6 @@ class TestFormat(unittest.TestCase):
         with open(f'{fn}', 'r') as fp:
             # The happy path.
             s = fp.read()
-            # cmd = sbot_format.SbotFormatJsonCommand(v)
-            # res = cmd._do_one(s)
             res = code_format.format_json(s)
             self.assertEqual(res[:50], '{\n    "MarkPitch": {\n        "Original": 0,\n      ')
 
@@ -49,10 +47,7 @@ class TestFormat(unittest.TestCase):
         with open(f'{fn}', 'r') as fp:
             # The happy path.
             s = fp.read()
-            # cmd = sbot_format.SbotFormatXmlCommand(v)
-            # res = cmd._do_one(s, '    ')
             res = code_format.format_xml(s, 4)
-
             if 'Error:' in res:
                 self.fail(res)
             else:
@@ -60,9 +55,29 @@ class TestFormat(unittest.TestCase):
 
             # Make it a bad file.
             s = s.replace('ColumnType=', '')
-            # res = cmd._do_one(s, '    ')
             res = code_format.format_xml(s, 4)
             self.assertEqual(res, "Error: not well-formed (invalid token): line 6, column 4")
 
 
-# TODO1 test CX
+    #------------------------------------------------------------
+    def test_format_c(self):
+
+        fn = os.path.join(my_dir, 'messy.c')
+        with open(f'{fn}', 'r') as fp:
+            # The happy path.
+            s = fp.read()
+            res = code_format.format_cx(s, 'C', 4)
+            self.assertEqual(res[450:475], '[1] = (val >> 8) & 0xFF;\n')
+
+
+    #------------------------------------------------------------
+    def test_format_cs(self):
+
+        fn = os.path.join(my_dir, 'messy.cs')
+        with open(f'{fn}', 'r') as fp:
+            # The happy path.
+            s = fp.read()
+
+            res = code_format.format_cx(s, 'C#', 4)
+            self.assertEqual(res[700:738], '\n    public Dumper(TextWriter writer)\n')
+
