@@ -1,6 +1,6 @@
 import sys
 import socket
-import pdb, bdb
+import pdb
 import os
 import datetime
 import traceback

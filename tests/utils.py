@@ -5,10 +5,11 @@ import traceback
 # Various test helpers.
 
 # Init trace log.
-_tlog_fn = 'tlog.txt'
+_tlog_fn = 'tlog.log'
 def reset_tlog(fn):
     global _tlog_fn
     _tlog_fn = fn
+    # print('!!!', _tlog_fn)
     try:
         os.remove(_tlog_fn)
     except:
@@ -18,6 +19,7 @@ def reset_tlog(fn):
 # Write to trace log.
 def write_tlog(txt):
     global _tlog_fn
+    # print('xxx', _tlog_fn)
     with open(_tlog_fn, 'a') as f:
         f.write(txt + '\n')
         f.flush()

@@ -1,166 +1,27 @@
-import sys
+# import sys
 import os
-import unittest
-# import subprocess
-# import platform
-import traceback
-import datetime
 import importlib
-import bdb
+# import unittest NOT a unit test!
 import utils
 
 
-#-----------------------------------------------------------------------------------
-my_dir = os.path.dirname(__file__)
 # Add source path to sys.
+my_dir = os.path.dirname(__file__)
 utils.ensure_import(my_dir, '..')
 # OK to import now.
 import pbot_pdb
-# # Benign reload in case of edited.
-# importlib.reload(pbot_pdb)
+# Benign reload in case of edited.
+importlib.reload(pbot_pdb)
 
-
-# #-----------------------------------------------------------------------------------
-# my_dir = os.path.dirname(__file__)
-
-# # Add source path to sys.
-# src_dir = os.path.abspath(os.path.join(my_dir, '..'))
-# if src_dir not in sys.path:
-#     sys.path.insert(0, src_dir) # or? sys.path.append(path)
-
-# # Reset dump file.
-# dump_fn = os.path.join(my_dir, 'out', 'dump.log')
-# try:
-#     os.remove(dump_fn)
-# except:
-#     pass    
-
-# # Write to dump file.
+# # Trace log.
+# utils.reset_tlog(os.path.join(my_dir, '..', 'ppdb.log'))
 # def dump(txt):
-#     with open(dump_fn, 'a') as f:
-#         f.write(txt + '\n')
-#         f.flush()
- TODOX
-
-#-----------------------------------------------------------------------------------
-
-class TestPbotPdb(unittest.TestCase):
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    #-----------------------------------------------------------------------------------
-    # ------- was SbotRunPdbCommand():
-    def test_happy(self): 
-
-        # Set a breakpoint here then step through and examine the code.
-        # from . import pbot_pdb; pbot_pdb.breakpoint()
-        import pbot_pdb; pbot_pdb.breakpoint()
-
-        ret = self.function_1(911, 'abcd')
-        print('ret:', ret)
-
-        # Unhandled exception actually goes to sys.__excepthook__.
-        # function_boom()
-
-        ret = self.function_2([33, 'thanks', 3.56], {'aaa': 111, 'bbb': 222, 'ccc': 333})
-        print('ret:', ret)
-
-    #----------------------------------------------------------
-    def function_1(self, a1: int, a2: str):
-        '''A simple function.'''
-        ret = f'answer is:{a1 * len(a2)}'
-        return ret
-
-    #----------------------------------------------------------
-    def function_2(self, a_list, a_dict):
-        '''A simple function.'''
-        return len(a_list) + len(a_dict)
-
-    #----------------------------------------------------------
-    def function_boom(self):
-        '''A function that causes an unhandled exception.'''
-        return 1 / 0
-
-
-    #-----------------------------------------------------------------------------------
-    # ------- TODO1 was SbotDebugCommand():
-    def test_boom(self):
-        pass
-
-        # Blow stuff up. Force unhandled exception.
-        # sc.debug('Forcing unhandled exception!')
-        # sc.open_path('not-a-real-file')
-        # i = 222 / 0
-
-
-        # dump('====== Dump a stack - most recent last')
-        # for f in traceback.extract_stack():
-        #     dump(_frame_formatter(f))
-
-
-        # dump('====== Dump a traceback - most recent last')
-        # try:
-        #     x = 1 / 0
-        # except Exception as e:
-        #     for f in traceback.extract_tb(e.__traceback__):
-        #         dump(_frame_formatter(f))
-
-
-        # '''
-        # is_folded(region: Region) → bool
-        # folded_regions() → list[sublime.Region]
-        # fold(x: Region | list[sublime.Region]) → bool
-        # unfold(x: Region | list[sublime.Region]) → list[sublime.Region]
-        # '''
-        # regions = self.view.folded_regions()
-        # text = ["folded_regions"]
-        # for r in regions:
-        #     s = f'region:{r}'
-        #     text.append(s)
-        # new_view = sc.create_new_view(self.view.window(), '\n'.join(text))
-
-
-
+#     utils.write_tlog('test_pdb.py: ' + txt)
 
 
 #-----------------------------------------------------------------------------------
-#----------------------- ST flavor TODO1 test or example? --------------------------
-#-----------------------------------------------------------------------------------
-
-
-
-#-----------------------------------------------------------------------------------
-
-class TestPdb_fromST(unittest.TestCase):
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    #-----------------------------------------------------------------------------------
-    # ------- was SbotRunPdbCommand():
-    def test_woo(self):
-
-        # Set a breakpoint here then step through and examine the code.
-        # from . import sbot_pdb;
-
-        # Benign reload in case of being edited.
-        # importlib.reload(sbot_pdb)
-
-        # Run the code under debug.
-        ret = do_a_suite(number=911, alpha='abcd')
-        print('ret:', ret)
-
-
-#----------------------------------------------------------
 class MyClass(object):
-    '''A simple object.'''
+    '''A simple debug target.'''
 
     def __init__(self, name, tags, arg):
         self._name = name
@@ -171,8 +32,53 @@ class MyClass(object):
         res = f'{self._arg}-user-{arg}'
         return res
 
-    def class_boom(self):
+    def do_boom(self):
         # Cause unhandled exception.
+        return 1 / 0
+
+
+#----------------------------------------------------------
+class TestPbotPdb():
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    #-----------------------------------------------------------------------------------
+    def go(self):
+
+        # Set a breakpoint here then step through and examine the code.
+        pbot_pdb.breakpoint()
+
+        ret = self.klass_function_1(911, 'abcd')
+        print('ret:', ret)
+
+        # Unhandled exception actually goes to sys.__excepthook__. Capture these in the code under test.
+        # self.klass_function_boom()
+
+        ret = self.klass_function_2([33, 'thanks', 3.56], {'aaa': 111, 'bbb': 222, 'ccc': 333})
+        print('ret:', ret)
+
+        # Run the code under debug.
+        ret = do_it(number=911, alpha='abcd')
+        print('ret:', ret)
+
+    #----------------------------------------------------------
+    def klass_function_1(self, a1: int, a2: str):
+        '''A simple function.'''
+        ret = f'answer is:{a1 * len(a2)}'
+        return ret
+
+    #----------------------------------------------------------
+    def klass_function_2(self, a_list, a_dict):
+        '''A simple function.'''
+        return len(a_list) + len(a_dict)
+
+    #----------------------------------------------------------
+    def klass_function_boom(self):
+        '''A function that causes an unhandled exception.'''
         return 1 / 0
 
 
@@ -184,7 +90,7 @@ def function_1(a1: int, a2: float):
     ret = f'answer is cl1:{cl1.do_something(a1)}...cl2:{cl2.do_something(a2)}'
 
     # Play with exception handling.
-    # ret = f'{cl1.class_boom()}'
+    # ret = f'{cl1.do_boom()}'
 
     return ret
 
@@ -202,7 +108,7 @@ def function_boom():
 
 
 #----------------------------------------------------------
-def do_a_suite(alpha, number):
+def do_it(alpha, number):
     '''Main code.'''
 
     # Benign reload in case of being edited.
@@ -219,3 +125,9 @@ def do_a_suite(alpha, number):
     ret = function_2([33, 'thanks', 3.56], {'aaa': 111, 'bbb': 222, 'ccc': 333})
 
     return ret
+
+
+#----------------------------------------------------------
+if __name__ == "__main__":
+    t = TestPbotPdb()
+    t.go()
