@@ -26,8 +26,8 @@ def write_tlog(txt):
 
 
 # Add path to sys.
-def ensure_import(*paths):
-    npath = os.path.abspath(os.path.join(*paths))
+def ensure_import(*path_parts):
+    npath = os.path.abspath(os.path.join(*path_parts))
     if npath not in sys.path:
         # append rather than insert so can override builtin.
         sys.path.append(npath)

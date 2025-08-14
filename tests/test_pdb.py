@@ -1,16 +1,15 @@
 # import sys
 import os
 import importlib
-# import unittest NOT a unit test!
 import utils
 
 
-# Add source path to sys.
+# Add source path to sys.path.
 my_dir = os.path.dirname(__file__)
 utils.ensure_import(my_dir, '..')
 # OK to import now.
 import pbot_pdb
-# Benign reload in case of edited.
+# Benign reload in case it's edited.
 importlib.reload(pbot_pdb)
 
 # # Trace log.
@@ -131,3 +130,6 @@ def do_it(alpha, number):
 if __name__ == "__main__":
     t = TestPbotPdb()
     t.go()
+else:
+    print('!!!This is not a python unit test. Run it from command line')
+    

@@ -5,12 +5,12 @@ import importlib
 import unittest
 import utils
 
-# Add source path to sys.
+# Add source path to sys.path.
 my_dir = os.path.dirname(__file__)
 utils.ensure_import(my_dir, '..')
 # OK to import now.
 import tracer as tr
-# Benign reload in case of edited.
+# Benign reload in case it's edited.
 importlib.reload(tr)
 
 
