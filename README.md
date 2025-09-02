@@ -4,7 +4,7 @@
 Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
 
 
-![logo](felix.jpg)
+![logo](felix600.jpg)
 
 
 
