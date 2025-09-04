@@ -67,17 +67,17 @@ class CommIf(object):
     def encoding(self):
         return self.stream.encoding
 
-    def send(self, s):
-        # self.do_debug(f'send(): {make_readable(s)}')
-        self.conn.sendall(s.encode())
+    def send(self, msg):
+        # self.do_debug(f'send(): {make_readable(msg)}')
+        self.conn.sendall(msg.encode())
 
     def readline(self, size=1):
         del size
         '''Core pdb calls this to read from cli/client. Captures the last user command.'''
         try:
-            s = self.stream.readline()
-            self.last_cmd = s
-            # self.do_debug(f'Received command: {make_readable(s)}')
+            msg = self.stream.readline()
+            self.last_cmd = msg
+            # self.do_debug(f'Received command: {make_readable(msg)}')
             return self.last_cmd
 
         except (ConnectionError, socket.timeout) as e:
@@ -112,7 +112,7 @@ class CommIf(object):
 
                     self.send(f'{s}{MDEL}' if color is None else f'\033[{color}m{s}\033[0m{MDEL}')
 
-                self.writePrompt()
+                self.prompt()
 
                 # Reset buffer.
                 self.buff = ''
@@ -133,7 +133,7 @@ class CommIf(object):
         '''Log only.'''
         write_log('DBG', msg)
 
-    def writePrompt(self):
+    def prompt(self):
         s = f'\033[{PROMPT_COLOR}m(Pdb)\033[0m ' if USE_COLOR else '(Pdb)'
         self.send(s)
 
