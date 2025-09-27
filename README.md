@@ -76,7 +76,10 @@ def excepthook(type, value, tb):
 sys.excepthook = excepthook
 ```
 
+# Remote Log
+remlog.py is a simple tool to broadcast UDP log messages from a balck-box component.
+Alos used for sublime plugin debugging using print() semantics.
+
 # Tracer
-A simple tool for tracing through code, especially function entry/exit.
-The best (only) documentation is to read
-  [the example](https://github.com/cepthomas/PyBagOfTricks/blob/main/tests/test_tracer.py).
+Tool for tracing through code, especially function entry/exit.
+The best (only) documentation is to read [the example](https://github.com/cepthomas/PyBagOfTricks/blob/main/tests/test_tracer.py).
