@@ -3,16 +3,13 @@
 
 Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
 
-
 ![logo](felix600.jpg)
-
 
 
 # PbotPdb 
 
 - Server for debugging python remotely over a tcp connection.
 - Initially developed for debugging Sublime Text plugins but is actually generally useful standalone.
-- [SbotDev](https://github.com/cepthomas/SbotDev) demonstrates how to use it for ST plugins.
 - There's a fair amount hacked from [remote-db](https://github.com/ionelmc/python-remote-pdb).
 - Built for ST4 on Windows. Linux and OSX should be ok but are minimally tested.
 
