@@ -74,8 +74,8 @@ sys.excepthook = excepthook
 ```
 
 # Remote Log
-remlog.py is a simple tool to broadcast UDP log messages from a balck-box component.
-Alos used for sublime plugin debugging using print() semantics.
+remlog.py is a simple tool to broadcast UDP log messages from a black-box component.
+Also used for sublime plugin debugging using print() semantics.
 
 # Tracer
 Tool for tracing through code, especially function entry/exit.
