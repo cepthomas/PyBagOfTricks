@@ -10,16 +10,16 @@ import time
 # cls
 # start C:\Dev\Apps\NTerm\bin\net8.0-windows\win-x64\NTerm.exe udp 127.0.0.1 51111
 # timeout 1
-# py test_remlog.py
+# py test_udp_sender.py
 
 
 # Add source path to sys.path.
 my_dir = os.path.dirname(__file__)
 utils.ensure_import(my_dir, '..')
 # OK to import now.
-import remlog
+import udp_sender
 # Benign reload in case it's edited.
-importlib.reload(remlog)
+importlib.reload(udp_sender)
 
 
 lines = []
@@ -35,6 +35,6 @@ for i in range(5):
     # inner loop
     for j in range(10):
         r =  random.randrange(0, lenl)
-        remlog.send(lines[r].rstrip())
+        udp_sender.send(lines[r].rstrip())
         time.sleep(0.05)
     time.sleep(0.5)

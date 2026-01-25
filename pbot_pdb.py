@@ -5,6 +5,11 @@ import os
 import datetime
 import traceback
 
+#############################################################################
+# TCP server for embedding in python scripts for debugging purposes.
+# Basically creates a remote pdb debugging interface.
+# Use with companion pbot_pdb_client.py or your other favorite terminal.
+#############################################################################
 
 #------------------------------------------------------------------------------
 #------------------------- Configuration start --------------------------------

@@ -1,16 +1,15 @@
 import sys
 import socket
+import os
+import random
+import time
 
 
-#------------------------------------------------------------------------------
-#------------------------- Configuration start --------------------------------
-#------------------------------------------------------------------------------
-
+# Configuration
 HOST = '127.0.0.1'
 PORT = 51111
 
 # Optional ansi color for categories.
-# https://en.wikipedia.org/wiki/ANSI_escape_code  91:br red  31:red  93:yellow  37/97:white
 CATS = { "INF":37, "DBG":93, "ERR":91 }
 
 # Delimiter for message lines. LF=10  CR=13  NUL=0
@@ -18,11 +17,6 @@ MDEL = '\0'
 
 # Debug.
 SEQ_NUM = False
-
-#------------------------------------------------------------------------------
-#------------------------- Configuration end ----------------------------------
-#------------------------------------------------------------------------------
-
 seq_num = 0
 
 def send(msg, cat=None):
