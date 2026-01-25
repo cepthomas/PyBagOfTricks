@@ -19,6 +19,7 @@ MDEL = '\0'
 SEQ_NUM = False
 seq_num = 0
 
+# Send a UDP message.
 def send(msg, cat=None):
     if SEQ_NUM:
         global seq_num
