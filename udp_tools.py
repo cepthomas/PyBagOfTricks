@@ -28,7 +28,7 @@ def send(msg, cat=None):
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-            msg = f'\033[{CATS[cat]}m{msg}\033[0m{MDEL}' if cat in CATS else f'{msg}{MDEL}'
+            msg = f'\u001b[{CATS[cat]}m{msg}\u001b[0m{MDEL}' if cat in CATS else f'{msg}{MDEL}'
             udp_socket.sendto(msg.encode('utf-8'), (HOST, PORT))
 
     except Exception as e:

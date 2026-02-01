@@ -115,7 +115,7 @@ class CommIf(object):
                         elif 'Error:' in s: color = ERROR_COLOR
                         elif s.startswith('> '): color = STACK_LOCATION_COLOR
 
-                    self.send(f'{s}{MDEL}' if color is None else f'\033[{color}m{s}\033[0m{MDEL}')
+                    self.send(f'{s}{MDEL}' if color is None else f'\u001b[{color}m{s}\u001b[0m{MDEL}')
 
                 self.prompt()
 
@@ -139,7 +139,7 @@ class CommIf(object):
         write_log('DBG', msg)
 
     def prompt(self):
-        s = f'\033[{PROMPT_COLOR}m(Pdb)\033[0m ' if USE_COLOR else '(Pdb)'
+        s = f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if USE_COLOR else '(Pdb)'
         self.send(s)
 
 
@@ -233,7 +233,7 @@ class PbotPdb(pdb.Pdb):
 
     def make_readable(self, s):
         '''So we can see things like LF, CR, ESC in log.'''
-        s = s.replace('\n', '_N').replace('\r', '_R').replace('\033', '_E')
+        s = s.replace('\n', '_N').replace('\r', '_R').replace('\u001b', '_E')
         return s
 
 

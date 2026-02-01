@@ -237,7 +237,7 @@ class PbotPdbClient(object):
 
     def make_readable(self, s):
         '''So we can see things like LF, CR, ESC in log.'''
-        return s.replace('\n', '_N').replace('\r', '_R').replace('\033', '_E')
+        return s.replace('\n', '_N').replace('\r', '_R').replace('\u001b', '_E')
 
 #------------------------------------------------------------------------------
 if __name__ == '__main__':

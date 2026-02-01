@@ -10,9 +10,9 @@ import socketserver
 HOST = 'localhost'
 PORT = 59120
 MAX_MSG = 10000
-ERR = '\033[91m'
-INFO = '\033[96m'
-ENDC = '\033[0m'
+ERR = '\u001b[91m'
+INFO = '\u001b[96m'
+ENDC = '\u001b[0m'
 
 
 ########## TCP Server ##########
