@@ -121,7 +121,7 @@ class TestTracer(unittest.TestCase):
         pass
 
     def test_success(self):
-        trace_fn = os.path.join(my_dir, 'out', 'tracer.log')
+        trace_fn = os.path.join(my_dir, 'tracer.log')
         tr.start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')'))
 
         T(f'Start {do_a_suite.__name__}:{do_a_suite.__doc__} {datetime.datetime.now()}')
