@@ -4,6 +4,14 @@ import importlib
 import utils
 
 
+######################################################
+# This is not a python unittest.
+# use:
+#   run a TCP client e.g. NTerm tcp localhost 59120
+#   then py test_pdb
+######################################################
+
+
 # Add source path to sys.path.
 my_dir = os.path.dirname(__file__)
 utils.ensure_import(my_dir, '..')
@@ -132,4 +140,3 @@ if __name__ == "__main__":
     t.go()
 else:
     print('!!!This is not a python unit test. Run it from command line')
-    

@@ -5,6 +5,13 @@ import importlib
 import unittest
 import utils
 
+
+######################################################
+# This is a python unittest.
+# use: python -m unittest test_tracer
+######################################################
+
+
 # Add source path to sys.path.
 my_dir = os.path.dirname(__file__)
 utils.ensure_import(my_dir, '..')
