@@ -1,29 +1,25 @@
-# import sys
+import sys
 import os
 import importlib
-import utils
 
 
 ######################################################
 # This is not a python unittest.
 # use:
-#   run a TCP client e.g. NTerm tcp localhost 59120
+#   run a TCP client e.g. NTerm udp localhost 59120
 #   then py test_pdb
 ######################################################
 
+# Add path to sys.
+npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if npath not in sys.path:
+    sys.path.insert(0, npath)
 
-# Add source path to sys.path.
-my_dir = os.path.dirname(__file__)
-utils.ensure_import(my_dir, '..')
 # OK to import now.
 import pbot_pdb
 # Benign reload in case it's edited.
-importlib.reload(pbot_pdb)
+# importlib.reload(pbot_pdb)
 
-# # Trace log.
-# utils.reset_tlog(os.path.join(my_dir, '..', 'ppdb.log'))
-# def dump(txt):
-#     utils.write_tlog('test_pdb.py: ' + txt)
 
 
 #-----------------------------------------------------------------------------------

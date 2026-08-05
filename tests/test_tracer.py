@@ -3,7 +3,6 @@ import os
 import datetime
 import importlib
 import unittest
-import utils
 
 
 ######################################################
@@ -11,14 +10,15 @@ import utils
 # use: python -m unittest test_tracer
 ######################################################
 
+# Add path to sys.
+npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if npath not in sys.path:
+    sys.path.insert(0, npath)
 
-# Add source path to sys.path.
-my_dir = os.path.dirname(__file__)
-utils.ensure_import(my_dir, '..')
 # OK to import now.
 import tracer as tr
 # Benign reload in case it's edited.
-importlib.reload(tr)
+# importlib.reload(tr)
 
 
 # Some optional shorthand.
@@ -128,7 +128,7 @@ class TestTracer(unittest.TestCase):
         pass
 
     def test_success(self):
-        trace_fn = os.path.join(my_dir, 'tracer.log')
+        trace_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'tracer.log'))
         tr.start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')'))
 
         T(f'Start {do_a_suite.__name__}:{do_a_suite.__doc__} {datetime.datetime.now()}')
