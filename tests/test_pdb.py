@@ -6,7 +6,7 @@ import importlib
 ######################################################
 # This is not a python unittest.
 # use:
-#   run a TCP client e.g. NTerm udp localhost 59120
+#   run a TCP/UDP client e.g. NTerm udp localhost 59120
 #   then py test_pdb
 ######################################################
 
@@ -114,7 +114,7 @@ def function_boom():
 def do_it(alpha, number):
     '''Main code.'''
 
-    # Benign reload in case of being edited.
+    # # Benign reload in case of being edited.
     importlib.reload(pbot_pdb)
 
     # Set a breakpoint here then step through and examine the code.

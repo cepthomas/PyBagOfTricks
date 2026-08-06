@@ -23,7 +23,7 @@ LOG_FN = os.path.join(os.path.dirname(__file__), 'ppdb.log')
 HOST = '127.0.0.1'
 PORT = 59120
 
-# Client connect seconds after breakpoint() called 0=forever. TODO1 any timeout on read()?
+# Client connect seconds after breakpoint() called 0=forever.
 TIMEOUT = 5
 
 # Indicate internal message (not pdb)
@@ -38,7 +38,7 @@ PROMPT_COLOR = 94 # blue
 ERROR_COLOR = 91 # red
 
 # Delimiter for socket message lines.
-MDEL = '' # '\n'
+MDEL = '\n'
 
 
 SEQ_NUM = True
@@ -57,11 +57,16 @@ class CommIf(object):
     '''
 
     _last_cmd = None
-    _buff = ''
+
+    # Collected parts of pdb write.
+    _pdbBuff = ''
+
+    # Simple packet loss detection.
     _seq_num = 0;
 
-    # def __init__(self):
-        # '''Construction.'''
+    def __init__(self):
+        '''Construction.'''
+        pass
 
 
     # --------------- Required interface ---------------
@@ -71,45 +76,50 @@ class CommIf(object):
     def encoding(self):
         return ENCODING
 
-    # read(size=-1, /) ??
-    #     Read and return at most size characters as str. If size is negative or None, reads until EOF.
-
-    def flush(self):
-        pass
-
     def readline(self, size=1):
+        '''Core pdb calls this to read from cli/client. Returns the valid user command.'''
         del size
-        '''Core pdb calls this to read from cli/client. Captures the last user command.'''
+        msg = None
+        exit = False
 
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((HOST, PORT))
+            if TIMEOUT > 0:
+                sock.settimeout(TIMEOUT)  # Seconds.
+            self._debug(f'UDP on {HOST}:{PORT} [{TIMEOUT}]')
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind((HOST, PORT))
-        # if TIMEOUT > 0:
-        #     sock.settimeout(TIMEOUT)  # Seconds.
-        self._debug(f'UDP on {HOST}:{PORT} [{TIMEOUT}]')
+            while msg is None and not exit:
+                try:
+                    data, _ = sock.recvfrom(4096) # blocks
+                    msg = data.decode(ENCODING)
+                    self._debug(f'Received message: {self._make_readable(msg)}')
 
-        try:
-            data, _ = sock.recvfrom(4096)
-            msg = data.decode(ENCODING)
-            self._debug(f'Received command: {self._make_readable(msg)}')
+                    if SEQ_NUM:
+                        pass
+                        # strip seq number from front '[99]'
+                        # check if it's expected
 
-            if SEQ_NUM:
-                pass
-                # strip seq number from front '[99]'
-                # check if it's expected
+                    self._last_cmd = msg
+                    return msg
 
-            self._last_cmd = msg
-            return msg
+                except KeyboardInterrupt as e:
+                    self._debug(f'KeyboardInterrupt')
+                    self._pdbBuff = ''
+                    exit = True # orderly shutdown
 
-        except Exception as e:
-            # KeyboardInterrupt, ConnectionError, socket.timeout
-            self._debug(f'CommIf.readline() exception: {str(e)}')
-            self._buff = ''
-            raise
+                except (ConnectionError, socket.timeout) as e:
+                    pass
+                    # self._debug(f'ConnectionError timeout')
+                    # future use
 
-        finally:
-            sock.close()
+                except Exception as e:
+                    self._debug(f'CommIf.readline() exception: {str(e)}')
+                    self._pdbBuff = ''
+                    raise # hard fail
+
+                # finally:
+                #     sock.close()
 
     def write(self, line):
         '''Core pdb calls this to write to cli/client. This adjusts and sends to socket.'''
@@ -117,48 +127,50 @@ class CommIf(object):
             # pdb writes lines piecemeal but we want full proper lines.
             # Easiest is to accumulate in a buffer until we see the prompt then slice and write.
             if '(Pdb)' in line:
-                for s in self._buff.splitlines():
-                    # sc.debug(f'DBG Send response: {s}')
-                    color = None
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
+                    for s in self._pdbBuff.splitlines():
+                        # sc.debug(f'DBG Send response: {s}')
+                        color = None
 
-                    if USE_COLOR:
-                        if s.startswith('-> '): color = CURRENT_LINE_COLOR
-                        elif ' ->' in s: color = CURRENT_LINE_COLOR
-                        elif s.startswith('>> '): color = EXCEPTION_LINE_COLOR
-                        elif '***' in s: color = ERROR_COLOR
-                        elif 'Error:' in s: color = ERROR_COLOR
-                        elif s.startswith('> '): color = STACK_LOCATION_COLOR
+                        if USE_COLOR:
+                            if s.startswith('-> '): color = CURRENT_LINE_COLOR
+                            elif ' ->' in s: color = CURRENT_LINE_COLOR
+                            elif s.startswith('>> '): color = EXCEPTION_LINE_COLOR
+                            elif '***' in s: color = ERROR_COLOR
+                            elif 'Error:' in s: color = ERROR_COLOR
+                            elif s.startswith('> '): color = STACK_LOCATION_COLOR
 
-                    self._send(f'{s}{MDEL}' if color is None else f'\u001b[{color}m{s}\u001b[0m{MDEL}')
+                        msg = f'{s}{MDEL}' if color is None else f'\u001b[{color}m{s}\u001b[0m{MDEL}'
+                        if SEQ_NUM:
+                            self.seq_num = self._seq_num + 1
+                            msg = f'[{self._seq_num}]{msg}{MDEL}'
+                        udp_socket.sendto(msg.encode(ENCODING), (HOST, PORT))
+                        self._debug(f'write(): {self._make_readable(msg)}')
 
-                # self._prompt()
-                s = f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if USE_COLOR else '(Pdb)'
-                self._send(s)
+                    # Write prompt.
+                    msg = f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if USE_COLOR else '(Pdb)'
+                    udp_socket.sendto(msg.encode(ENCODING), (HOST, PORT))
+                    self._debug(f'write(): {msg}')
 
-                # Reset buffer.
-                self._buff = ''
+                    # Reset buffer.
+                    self._pdbBuff = ''
             else:
                 # Just collect.
-                self._buff += line
+                self._pdbBuff += line
 
         except Exception as e:
             # ?? (ConnectionError, socket.timeout)
             self._debug(f'CommIf.write() other exception: {str(e)}')
-            self._buff = ''
+            self._pdbBuff = ''
             raise
 
+    # read(size=-1, /) not needed?
+    #     Read and return at most size characters as str. If size is negative or None, reads until EOF.
+
+    def flush(self):
+        pass
+
     # --------------- Internals ---------------
-
-    def _send(self, msg):
-        # Send a UDP message. Caller handles errors.
-        if SEQ_NUM:
-            self.seq_num = self._seq_num + 1
-            msg = f'[{self._seq_num}]{msg}{MDEL}'
-
-        self._debug(f'_send(): {self._make_readable(msg)}')
-
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-            udp_socket.sendto(msg.encode(ENCODING), (HOST, PORT))
 
     def _make_readable(self, s):
         '''So we can see things like LF, CR, ESC in log.'''
@@ -246,7 +258,7 @@ def _write_log(level, msg, tb=None):
     frame = sys._getframe(2)
     time_str = f'{str(datetime.datetime.now())}'[0:-3]
     with open(LOG_FN, 'a') as log:
-        out_line = f'{time_str} {level} SRV {frame.f_lineno} {msg}'
+        out_line = f'{time_str} {level} pbot_pdb.py({frame.f_lineno}) {msg}'
         log.write(out_line + '\n')
         if tb is not None:
             log.write('\n'.join(traceback.format_tb(tb)) + '\n')
