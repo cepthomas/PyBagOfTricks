@@ -6,7 +6,7 @@ import importlib
 ######################################################
 # This is not a python unittest.
 # use:
-#   run a TCP/UDP client e.g. NTerm udp localhost 59120
+#   run a TCP/UDP client e.g. NTerm udp localhost 59140
 #   then py test_pdb
 ######################################################
 
@@ -18,7 +18,7 @@ if npath not in sys.path:
 # OK to import now.
 import pbot_pdb
 # Benign reload in case it's edited.
-# importlib.reload(pbot_pdb)
+importlib.reload(pbot_pdb)
 
 
 
@@ -56,17 +56,17 @@ class TestPbotPdb():
         pbot_pdb.breakpoint()
 
         ret = self.klass_function_1(911, 'abcd')
-        print('ret:', ret)
+        # print('ret:', ret)
 
         # Unhandled exception actually goes to sys.__excepthook__. Capture these in the code under test.
         # self.klass_function_boom()
 
         ret = self.klass_function_2([33, 'thanks', 3.56], {'aaa': 111, 'bbb': 222, 'ccc': 333})
-        print('ret:', ret)
+        # print('ret:', ret)
 
         # Run the code under debug.
         ret = do_it(number=911, alpha='abcd')
-        print('ret:', ret)
+        # print('ret:', ret)
 
     #----------------------------------------------------------
     def klass_function_1(self, a1: int, a2: str):
@@ -114,7 +114,7 @@ def function_boom():
 def do_it(alpha, number):
     '''Main code.'''
 
-    # # Benign reload in case of being edited.
+    # Benign reload in case of being edited.
     importlib.reload(pbot_pdb)
 
     # Set a breakpoint here then step through and examine the code.

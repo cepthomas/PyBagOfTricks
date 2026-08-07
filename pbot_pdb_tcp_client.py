@@ -9,10 +9,10 @@ import traceback
 
 
 #############################################################################
-# TCP client that is pbot_pdb.py aware. TODO1 remove or??
+# TCP client that is pbot_pdb.py aware.
 #############################################################################
 
-# TODO Probably could be general purpose.
+# Probably could be general purpose. TODO1 remove or combine with UDP
 
 #------------------------------------------------------------------------------
 #------------------------- Configuration start --------------------------------

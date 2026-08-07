@@ -18,7 +18,7 @@ if npath not in sys.path:
 # OK to import now.
 import tracer as tr
 # Benign reload in case it's edited.
-# importlib.reload(tr)
+importlib.reload(tr)
 
 
 # Some optional shorthand.

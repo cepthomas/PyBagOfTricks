@@ -6,8 +6,7 @@ import datetime
 import traceback
 
 
-# UDP based custom python remote debugger. TODO1 combine with tcp version.
-
+# TODO1 logger for stuff like client/server/tracer + ttools to work with.
 
 #------------------------- Configuration start --------------------------------
 
