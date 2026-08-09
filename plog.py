@@ -1,264 +1,202 @@
 import sys
-import socket
-import pdb
 import os
+import socket
+import time
 import datetime
 import traceback
+import shutil
+import threading
+import enum
+
+# Dumb simple logger for python.
+
+#-------------------------------------------------------------------------------
+#---------------------------- Vars ---------------------------------------------
+#-------------------------------------------------------------------------------
+
+# Log file name. Arg req.
+_log_fn = None
+
+# Logger name. Arg req.
+_name = None
+
+# Mode - overwrite/append. Arg opt.
+_mode = 'w' # 'a'
+
+# Max log file. Arg opt.
+_file_size = 50000
+
+# The log file object.
+_f = None
+
+# For elapsed time stamps.
+_start_time = 0
+
+# Dynamic flag controls execution.
+_enabled = False
+
+# Thread lock for writing.
+_lock = threading.Lock()
 
 
-# TODO1 logger for stuff like client/server/tracer + ttools to work with.
+#-------------------------------------------------------------------------------
+#---------------------------- Lifecycle ----------------------------------------
+#-------------------------------------------------------------------------------
 
-#------------------------- Configuration start --------------------------------
+#-------------------------------------------------------------------------------
+def init(name, fn, append=True, max=50000):
+    ''' Open the file '''
+    global _name, _log_fn, _file_size, _f, _start_time, _enabled
+    _start_time = time.perf_counter_ns()
 
-# Where to log. Usually same as the client log. None indicates no logging.
-LOG_FN = os.path.join(os.path.dirname(__file__), 'ppdb.log')
+    _name = name
+    _log_fn = fn
+    _file_size = max
 
-HOST = '127.0.0.1'
-PORT = 59140
-ENCODING = 'utf-8'
-# Delimiter for socket message lines.
-MDEL = '\n'
-
-# Client connect seconds after breakpoint() called 0=forever.
-TIMEOUT = 5
-# Add sequence number to all messages. Simple loss detection.
-SEQ_NUM = True
-
-# Indicate internal message (not pdb)
-MSG_IND = '!'
-
-# Server provides ansi color (https://en.wikipedia.org/wiki/ANSI_escape_code)
-USE_COLOR = False
-CURRENT_LINE_COLOR = 93 # yellow
-EXCEPTION_LINE_COLOR = 92 # green
-STACK_LOCATION_COLOR = 96 # cyan
-PROMPT_COLOR = 94 # blue
-ERROR_COLOR = 91 # red
-
-
-
-#------------------------- Configuration end ----------------------------------
-
-
-#------------------------------------------------------------------------------
-class CommIf(object):
-    '''
-    Read/write interface to socket. Makes socket look like a file.
-    Also handles encoding, color, line endings etc.
-    '''
-
-    _last_cmd = None
-
-    # Collected parts of pdb write.
-    _pdbBuff = ''
-
-    # Simple packet loss detection.
-    _seq_num = 0;
-
-    def __init__(self):
-        '''Construction.'''
-        pass
-
-
-    # --------------- Required interface ---------------
-    # per https://docs.python.org/3/library/io.html#io.TextIOBase
-
-    @property
-    def encoding(self):
-        return ENCODING
-
-    def readline(self, size=1):
-        '''Core pdb calls this to read from cli/client. Returns the valid user command.'''
-        del size
-        msg = None
-        exit = False
-
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind((HOST, PORT))
-            if TIMEOUT > 0:
-                sock.settimeout(TIMEOUT)  # Seconds.
-            self._debug(f'UDP on {HOST}:{PORT} [{TIMEOUT}]')
-
-            while msg is None and not exit:
-                try:
-                    data, _ = sock.recvfrom(4096) # blocks
-                    msg = data.decode(ENCODING)
-                    self._debug(f'Received message: {self._make_readable(msg)}')
-
-                    if SEQ_NUM:
-                        pass
-                        # strip seq number from front '[99]'
-                        # check if it's expected
-
-                    self._last_cmd = msg
-                    return msg
-
-                except KeyboardInterrupt as e:
-                    self._debug(f'KeyboardInterrupt')
-                    self._pdbBuff = ''
-                    exit = True # orderly shutdown
-
-                except (ConnectionError, socket.timeout) as e:
+    with _lock:
+        try:
+            # Initialize logging. Maybe roll over log now.
+            if os.path.exists(_log_fn) and os.path.getsize(_log_fn) > _file_size:
+                bup = _log_fn.replace('.log', '_old.log')
+                shutil.copyfile(_log_fn, bup)
+                # Clear current log file.
+                with open(_log_fn, 'w'):
                     pass
-                    # self._debug(f'ConnectionError timeout')
-                    # future use
 
-                except Exception as e:
-                    self._debug(f'CommIf.readline() exception: {str(e)}')
-                    self._pdbBuff = ''
-                    raise # hard fail
-
-                # finally:
-                #     sock.close()
-
-    def write(self, line):
-        '''Core pdb calls this to write to cli/client. This adjusts and sends to socket.'''
-        try:
-            # pdb writes lines piecemeal but we want full proper lines.
-            # Easiest is to accumulate in a buffer until we see the prompt then slice and write.
-            if '(Pdb)' in line:
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-                    for s in self._pdbBuff.splitlines():
-                        # sc.debug(f'DBG Send response: {s}')
-                        color = None
-
-                        if USE_COLOR:
-                            if s.startswith('-> '): color = CURRENT_LINE_COLOR
-                            elif ' ->' in s: color = CURRENT_LINE_COLOR
-                            elif s.startswith('>> '): color = EXCEPTION_LINE_COLOR
-                            elif '***' in s: color = ERROR_COLOR
-                            elif 'Error:' in s: color = ERROR_COLOR
-                            elif s.startswith('> '): color = STACK_LOCATION_COLOR
-
-                        msg = f'{s}{MDEL}' if color is None else f'\u001b[{color}m{s}\u001b[0m{MDEL}'
-                        if SEQ_NUM:
-                            self.seq_num = self._seq_num + 1
-                            msg = f'[{self._seq_num}]{msg}{MDEL}'
-                        udp_socket.sendto(msg.encode(ENCODING), (HOST, PORT))
-                        self._debug(f'write(): {self._make_readable(msg)}')
-
-                    # Write prompt.
-                    msg = f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if USE_COLOR else '(Pdb)'
-                    udp_socket.sendto(msg.encode(ENCODING), (HOST, PORT))
-                    self._debug(f'write(): {msg}')
-
-                    # Reset buffer.
-                    self._pdbBuff = ''
-            else:
-                # Just collect.
-                self._pdbBuff += line
+            # Open file now and keep it open. Note that each instance requires its own file.
+            _f = open(_log_fn, 'a' if append else 'w')
 
         except Exception as e:
-            # ?? (ConnectionError, socket.timeout)
-            self._debug(f'CommIf.write() other exception: {str(e)}')
-            self._pdbBuff = ''
-            raise
+            _f = None
+            _start_time = 0
+            _enabled = False
+            error(f'Failed to open log file: {fn}', e)
 
-    # read(size=-1, /) not needed?
-    #     Read and return at most size characters as str. If size is negative or None, reads until EOF.
+#-------------------------------------------------------------------------------
+def close():
+    '''Stop logging. Close file.'''
+    global _f, _enabled
+    _enabled = False
 
-    def flush(self):
-        pass
-
-    # --------------- Internals ---------------
-
-    def _make_readable(self, s):
-        '''So we can see things like LF, CR, ESC in log.'''
-        s = s.replace('\n', '_N').replace('\r', '_R').replace('\u001b', '_E')
-        return s
-
-    def _debug(self, msg):
-        '''Log only.'''
-        _write_log('COM', msg)
-
-
-#------------------------------------------------------------------------------
-class PbotPdb(pdb.Pdb):
-    '''Custom pdb using UDP.'''
-
-    def __init__(self):
-        '''Construction.'''
+    with _lock:
         try:
-            self.commif = CommIf()
-            super().__init__(stdin=self.commif, stdout=self.commif)  # pyright: ignore
-            # TODO1 colorize=False - enable colorized output in the debugger, if color is supported. This will highlight source code displayed in pdb
-            # mode=None - specifies how the debugger was invoked. It impacts the workings of some debugger commands. Valid values are 'inline' (used by the breakpoint() builtin), 'cli' (used by the command line invocation) or None (for backwards compatible behaviour, as before the mode argument was added).
-            # skip=None - iterable of glob-style module name patterns. The debugger will not step into frames that originate in a module that matches one of these patterns.
-
-        except Exception as e:
-            # Error handler. ?? ConnectionError, socket.timeout
-            self._error(e)
-
-    def breakpoint(self, frame):
-        ''' Starts the debugger.'''
-        self._debug('breakpoint() entry')
-        if self.commif is not None:
-            try:
-                # This blocks until user says done.
-                super().set_trace(frame)
-
-            except Exception as e:
-                # Exceptions in the code under test go to sys.excepthook so this doesn't do anything.
-                self._error(e)
-
-        self._debug('breakpoint() exit')
-        self.do_quit()
+            if _f:
+                _f.flush()
+                _f.close()
+                _f = None
+        finally:
+            _f = None
 
 
-    # --------------- Custom user cmds ---------------
-    def do_quit(self, arg=None):
-        ''' Stopping debugging, clean up resources, exit application. '''
-        self._info('Server quitting.')
+#-------------------------------------------------------------------------------
+#---------------------------- Public Functions ---------------------------------
+#-------------------------------------------------------------------------------
 
-        if self.commif is not None:
-            self.commif = None
+#-------------------------------------------------------------------------------
+def setEnable(enable):
+    '''Set the capture flag.'''
+    global _enabled
+    _enabled = enable
 
-        try:
-            super().do_quit(arg)
-        except:
-            pass
-            # self._debug('do_quit() exit')
-    do_q = do_quit # alias
+#-------------------------------------------------------------------------------
+def flush():
+    '''Whoosh.'''
+    if _f:
+        _f.flush()
 
-
-    # --------------- Internals ---------------
-    def _error(self, e):
-        '''Log, tell, exit. All are considered fatal. Exit the application. User needs to restart debugger.'''
-        _write_log('ERR', str(e), e.__traceback__)
-        print(f'!!! Server Error: {e}\n')
-        self.do_quit()
-
-    def _info(self, msg):
-        '''Log, tell.'''
-        _write_log('INF', msg)
-        print(f'!!! {msg}\n')
-
-    def _debug(self, msg):
-        '''Log only.'''
-        _write_log('DBG', msg)
-
-
-#------------------------------------------------------------------------------
-def _write_log(level, msg, tb=None):
-    '''Format a standard message with caller info and log it. Optional trace.'''
-    if LOG_FN is None:
+#-------------------------------------------------------------------------------
+def error(message, exc=None):
+    '''Client logger function.'''
+    if not _enabled:
         return
+
+    tb = exc.__traceback__
+    _write_log('ERR', message, tb)
+
+    # Show the user some context info.
+    info = [message]
+    for s in traceback.format_tb(tb):
+        if len(s) > 0:
+            info.append(s[:-1])
+
+#-------------------------------------------------------------------------------
+def warn(message):
+    '''Client logger function.'''
+    if not _enabled:
+        return
+
+    _write_log('WRN', message)
+
+#-------------------------------------------------------------------------------
+def info(message):
+    '''Client logger function.'''
+    if not _enabled:
+        return
+
+    _write_log('INF', message)
+
+#-------------------------------------------------------------------------------
+def debug(message):
+    '''Client logger function.'''
+    if not _enabled:
+        return
+
+    _write_log('DBG', message)
+
+
+#-------------------------------------------------------------------------------
+#---------------------------- Private Functions --------------------------------
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+def _write_log(slevel, message, tb=None):
+    '''Format a standard message with caller info and log it.'''
+    global _enabled
+
+    if _f is None:
+        _enabled = False
+        raise RuntimeError('Logger has not been initialized.')
+
+    # # Sometimes get stray empty lines.
+    # if len(message) == 0:
+    #     return
+    # if len(message) == 1 and message[0] == '\n':
+    #     return
+
+    # Get caller info.
     frame = sys._getframe(2)
+    fn = os.path.basename(frame.f_code.co_filename)
+    line = frame.f_lineno
+    # f'func = {frame.f_code.co_name}'
+    # f'mod_name = {frame.f_globals["__name__"]}'
+    # f'class_name = {frame.f_locals["self"].__class__.__name__}'
+
     time_str = f'{str(datetime.datetime.now())}'[0:-3]
-    out_line = f'{time_str} : {level} pbot_pdb.py({frame.f_lineno}) {msg}'
-    # 2026-08-06 08:16:38.665 COM 168 _send(): [0]>>>>>>>>>>>>>>>
-    with open(LOG_FN, 'a') as log:
-        log.write(out_line + '\n')
-        if tb is not None:
-            log.write('\n'.join(traceback.format_tb(tb)) + '\n')
-        log.flush()
+    out_line = f'{time_str} : {slevel} {_name} {fn}({line}) {message}'
 
-# slog:
-# 2026-08-06 08:16:18.236 : INF App App.cs(125) NTerm using UdpComm 127.0.0.1:59140 8/6/2026 8:16:18 AM
+    stb = None
+    if tb is not None:
+        # The traceback formatter is a bit ugly - clean it up.
+        tblines = []
+        for s in traceback.format_tb(tb):
+            if len(s) > 0:
+                tblines.append(s[:-1])
+        stb = '\n'.join(tblines)
 
-#------------------------------------------------------------------------------
-def breakpoint():
-    '''Opens a remote PDB. See test_pdb.py.'''
-    ppdb = PbotPdb()
-    ppdb.breakpoint(sys._getframe().f_back)
+    with _lock:
+        # Write the record.
+        _f.write(out_line + '\n')
+        if stb:
+            _f.write(stb + '\n')
+        # _f.flush()
+
+#-------------------------------------------------------------------------------
+def _make_readable(s):
+    '''So we can see things like LF, CR, ESC in log.'''
+    s = s.replace('\n', '_N').replace('\r', '_R').replace('\u001b', '_E')
+    return s
+
+#-------------------------------------------------------------------------------
+def _get_msec():
+    '''Get current msec.'''
+    return time.perf_counter_ns() / 1000000

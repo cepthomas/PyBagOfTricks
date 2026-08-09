@@ -6,7 +6,7 @@ import functools
 import platform
 import inspect
 
-
+# TODO1 Needs write lock like plog.
 
 #-----------------------------------------------------------------------------------
 #---------------------------- Private fields ---------------------------------------

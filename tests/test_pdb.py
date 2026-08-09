@@ -10,7 +10,7 @@ import importlib
 #   then py test_pdb
 ######################################################
 
-# Add path to sys.
+# Add code-under-test path to sys.
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if npath not in sys.path:
     sys.path.insert(0, npath)
@@ -18,7 +18,7 @@ if npath not in sys.path:
 # OK to import now.
 import pbot_pdb
 # Benign reload in case it's edited.
-importlib.reload(pbot_pdb)
+# importlib.reload(pbot_pdb)
 
 
 
@@ -115,7 +115,7 @@ def do_it(alpha, number):
     '''Main code.'''
 
     # Benign reload in case of being edited.
-    importlib.reload(pbot_pdb)
+    # importlib.reload(pbot_pdb)
 
     # Set a breakpoint here then step through and examine the code.
     pbot_pdb.breakpoint()

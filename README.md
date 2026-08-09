@@ -73,11 +73,15 @@ def excepthook(type, value, tb):
 sys.excepthook = excepthook
 ```
 
-# Socket Tools
+# Socket Tools ???
 
 These are intended to be used by copying and adding app-specific behavior:
 - udp_tools.py: General purpose UDP tools.
 - tcp_server.py: General purpose TCP tools.
+
+# Plog
+Dumb simple logger for python.
+
 
 # Tracer
 Tool for tracing through code, especially function entry/exit.

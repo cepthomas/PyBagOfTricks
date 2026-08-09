@@ -5,12 +5,12 @@ import importlib
 import unittest
 
 
-######################################################
-# This is a python unittest.
-# use: python -m unittest test_tracer
-######################################################
 
-# Add path to sys.
+# #os.path.join(_store_path, f'{_plugin_name}.log')
+
+
+
+# Add code-under-test path to sys.
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if npath not in sys.path:
     sys.path.insert(0, npath)
@@ -18,7 +18,7 @@ if npath not in sys.path:
 # OK to import now.
 import tracer as tr
 # Benign reload in case it's edited.
-importlib.reload(tr)
+# importlib.reload(tr)
 
 
 # Some optional shorthand.
