@@ -16,6 +16,17 @@ import plog
 
 # TCP client that is pbot_pdb.py aware.
 
+# Fancy Client
+# Optionally you can use the smarter `pbot_pdb_client.py` script which does all of the above plus:
+# - Automatically connects to the server. This means that you can edit/run your code
+#   without having to restart the client.
+# - Detects unresponsive server by requiring a response for each command sent.
+# - Provides some extra system status information, indicated by `!` (or marker of your choosing).
+# - Workflow is similar to the above except you can now reload/run the code as part of your dev/edit cycle.
+# - Optionally edit the configuration block in this file.
+# - Use ctrl-C to exit the client. The server will also stop/unblock.
+# ![Fancy Client](cli2.png)
+
 # Where to log. Usually same as the server log. None indicates no logging.
 LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
 
@@ -26,7 +37,7 @@ HOST = '127.0.0.1'
 PORT = 59120
 
 # Delimiter for socket message lines.
-MDEL = '\n'
+MDEL = '\u000A' # NL
 
 
 #------------------------------------------------------------------------------

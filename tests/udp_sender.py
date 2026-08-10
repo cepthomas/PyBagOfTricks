@@ -5,11 +5,14 @@ import importlib
 import random
 import time
 
+# 
+
 # Add path to logger.
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if npath not in sys.path:
     sys.path.insert(0, npath)
 import plog
+
 
 # Where to log. Usually same as the server log. None indicates no logging.
 LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
@@ -17,7 +20,8 @@ LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
 HOST = '127.0.0.1' # 'localhost'
 PORT = 59140
 # Delimiter for message lines. LF=10  CR=13  NUL=0
-MDEL = '\u000A'
+MDEL = ''
+# MDEL = '\u0000'
 TIMEOUT = 5
 
 seq_num = 0
@@ -26,7 +30,6 @@ seq_num = 0
 lines = []
 with open('ross_1.txt') as f:
     lines = f.readlines()
-
 
 
 # Send function.

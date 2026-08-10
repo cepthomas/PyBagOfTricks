@@ -2,6 +2,9 @@ import sys
 import os
 import importlib
 
+
+# This is an example of using ppdb in a python code file.
+
 doc = '''
 ######################################################
 # This is not a python unittest.
@@ -9,7 +12,7 @@ doc = '''
 #   - run one of:
 #     - UDP client on localhost:59140
 #     - TCP client on localhost:59120
-#   - py test_pdb
+#   - py test_ppdb.py
 ######################################################
 '''
 

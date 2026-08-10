@@ -8,10 +8,14 @@ import plog
 
 # UDP or TCP server for embedding in python scripts for debugging purposes.
 # Basically creates a remote pdb debugging interface.
+# TODO finesse two flavors in same file?
 
-# ------------------- Configuration from TODO1 -------------------------------
+
+# ---------------------- Configuration ----------------------------------
+# TODO Make configurable later?
+
 # Where to log. Usually same as the client log. None indicates no logging.
-LOG_FN = os.path.join(os.path.dirname(__file__), 'log', 'ppdb.log')
+LOG_FN = os.path.join(os.path.dirname(__file__), 'log', 'pbot_pdb.log')
 
 HOST = '127.0.0.1'
 PORT = 59140 # UDP
@@ -19,8 +23,8 @@ PORT = 59140 # UDP
 
 # Probably UDP only.
 ENCODING = 'utf-8'
-# Delimiter for socket message lines. TODO support none so UDP can have inline \n etc.
-MDEL = '\n'
+# Delimiter for socket message lines.
+MDEL = '\u000A' # NL
 # Timeout. Means different things depending on TCP/UDP.
 TIMEOUT = 5
 # Add sequence number to all UDP messages. Simple loss detection.
@@ -169,7 +173,7 @@ class PbotPdb(pdb.Pdb):
 
             self.commif = UdpIf()
             super().__init__(stdin=self.commif, stdout=self.commif, skip=None)  # pyright: ignore
-            # TODO 3.14 colorize=True  mode=???   lse - enable colorized output in the debugger, if color is supported.
+            # TODO 3.14+ colorize=True  mode=???   lse - enable colorized output in the debugger, if color is supported.
 
         except Exception as e:
             # Error handler. ?? ConnectionError, socket.timeout
@@ -205,7 +209,6 @@ class PbotPdb(pdb.Pdb):
             pass
             # plog.debug('do_quit() exit')
     do_q = do_quit # alias
-
 
 
 #------------------------------------------------------------------------------
@@ -303,7 +306,7 @@ class TcpIf(object):
 
 
 #------------------------------------------------------------------------------
-class PbotPdbTcp(pdb.Pdb): # TODO finesse two flavors
+class PbotPdbTcp(pdb.Pdb):
     '''Run pdb behind a blocking tcp server.'''
 
     def __init__(self):
