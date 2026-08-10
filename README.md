@@ -80,7 +80,7 @@ These are intended to be used by copying and adding app-specific behavior:
 - tcp_server.py: General purpose TCP tools.
 
 # Plog
-Dumb simple logger for python.
+Dumb simple logger for python. One per client module.
 
 
 # Tracer

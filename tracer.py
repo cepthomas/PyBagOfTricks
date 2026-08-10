@@ -5,14 +5,14 @@ import traceback
 import functools
 import platform
 import inspect
+import threading
 
-# TODO1 Needs write lock like plog.
 
 #-----------------------------------------------------------------------------------
 #---------------------------- Private fields ---------------------------------------
 #-----------------------------------------------------------------------------------
 
-# The trace file.
+# The trace file object.
 _ftrace = None
 
 # For elapsed time stamps.
@@ -26,6 +26,9 @@ _stop_on_exception = False
 
 # Arg separators for records.
 _sep = ('(', ')')  # or ('[', ']') ('|', '|')
+
+# Thread lock for writing.
+_lock = threading.Lock()
 
 
 #-----------------------------------------------------------------------------------
@@ -46,23 +49,24 @@ def start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')')):
 
     stop()  # just in case
 
-    if clean_file:
-        try:
-            os.remove(trace_fn)
-        except:
-            pass    
+    with _lock:
+        if clean_file:
+            try:
+                os.remove(trace_fn)
+            except:
+                pass    
 
-    # Open file now and keep it open. Open/close on every write is too expensive.
-    # Note that each instance requires its own file.
-    try:
-        _ftrace = open(trace_fn, 'a')
-        _trace_start_time = time.perf_counter_ns()
-        _trace_enabled = True
-    except Exception as e:
-        _ftrace = None
-        _trace_start_time = 0
-        _trace_enabled = False
-        raise RuntimeError(f'Failed to open trace file - disabling tracing. {e}')
+        # Open file now and keep it open. Open/close on every write is too expensive.
+        # Note that each instance requires its own file.
+        try:
+            _ftrace = open(trace_fn, 'a')
+            _trace_start_time = time.perf_counter_ns()
+            _trace_enabled = True
+        except Exception as e:
+            _ftrace = None
+            _trace_start_time = 0
+            _trace_enabled = False
+            raise RuntimeError(f'Failed to open trace file - disabling tracing. {e}')
 
 
 #---------------------------------------------------------------------------
@@ -70,12 +74,13 @@ def stop():
     '''Stop tracing.'''
     global _ftrace
     global _trace_enabled
-
-    if _ftrace is not None:
-        _ftrace.flush()
-        _ftrace.close()
-        _ftrace = None
     _trace_enabled = False
+
+    with _lock:
+        if _ftrace is not None:
+            _ftrace.flush()
+            _ftrace.close()
+            _ftrace = None
 
 
 #---------------------------------------------------------------------------
@@ -186,7 +191,8 @@ def _trace(func_name, line, args=None):
     s = ' '.join(parts) + '\n'
 
     # Write the record.
-    _ftrace.write(s)
+    with _lock:
+        _ftrace.write(s)
 
 
 #---------------------------------------------------------------------------

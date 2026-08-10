@@ -6,7 +6,8 @@ import datetime
 import traceback
 import shutil
 import threading
-import enum
+from ntpath import exists
+
 
 # Dumb simple logger for python.
 
@@ -15,28 +16,34 @@ import enum
 #-------------------------------------------------------------------------------
 
 # Log file name. Arg req.
-_log_fn = None
+_log_fn = '???'
 
 # Logger name. Arg req.
-_name = None
+_name = '???'
 
-# Mode - overwrite/append. Arg opt.
-_mode = 'w' # 'a'
+# Mode - overwrite/append. Arg opt - default is append
+_mode = '?'
 
-# Max log file. Arg opt.
-_file_size = 50000
+# Make readable, stuff like \n etc.
+_readable = False
+
+# Max log file lines. Arg opt.
+_max = 1000
 
 # The log file object.
 _f = None
 
-# For elapsed time stamps.
-_start_time = 0
-
-# Dynamic flag controls execution.
-_enabled = False
-
 # Thread lock for writing.
 _lock = threading.Lock()
+
+# For elapsed time stamps.
+_start_time = time.perf_counter_ns()
+
+# Capturing.
+_enabled = False
+
+# Simple file size mgmt.
+_line_cnt = 0
 
 
 #-------------------------------------------------------------------------------
@@ -44,36 +51,28 @@ _lock = threading.Lock()
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-def init(name, fn, append=True, max=50000):
-    ''' Open the file '''
-    global _name, _log_fn, _file_size, _f, _start_time, _enabled
-    _start_time = time.perf_counter_ns()
+def init(name, fn, append=True, readable=False max=1000):
+    ''' Start the file '''
+    global _name, _log_fn, _mode, _max, _f, _enabled
+
+    stop() # just in case
 
     _name = name
     _log_fn = fn
-    _file_size = max
+    _readable = readable
+    _max = max
+    _mode = 'a' if append else 'w'
 
     with _lock:
         try:
-            # Initialize logging. Maybe roll over log now.
-            if os.path.exists(_log_fn) and os.path.getsize(_log_fn) > _file_size:
-                bup = _log_fn.replace('.log', '_old.log')
-                shutil.copyfile(_log_fn, bup)
-                # Clear current log file.
-                with open(_log_fn, 'w'):
-                    pass
-
-            # Open file now and keep it open. Note that each instance requires its own file.
-            _f = open(_log_fn, 'a' if append else 'w')
-
+            # Open file now and keep it open.
+            _f = open(_log_fn, _mode)
         except Exception as e:
-            _f = None
-            _start_time = 0
-            _enabled = False
+            stop()
             error(f'Failed to open log file: {fn}', e)
 
 #-------------------------------------------------------------------------------
-def close():
+def stop():
     '''Stop logging. Close file.'''
     global _f, _enabled
     _enabled = False
@@ -86,7 +85,6 @@ def close():
                 _f = None
         finally:
             _f = None
-
 
 #-------------------------------------------------------------------------------
 #---------------------------- Public Functions ---------------------------------
@@ -107,41 +105,38 @@ def flush():
 #-------------------------------------------------------------------------------
 def error(message, exc=None):
     '''Client logger function.'''
-    if not _enabled:
-        return
+    if _enabled:
+        tb = None if not exc else exc.__traceback__
+        _write_log('ERR', message, tb)
 
-    tb = exc.__traceback__
-    _write_log('ERR', message, tb)
-
-    # Show the user some context info.
-    info = [message]
-    for s in traceback.format_tb(tb):
-        if len(s) > 0:
-            info.append(s[:-1])
+        # Show the user some context info.
+        info = [message]
+        for s in traceback.format_tb(tb):
+            if len(s) > 0:
+                info.append(s[:-1])
 
 #-------------------------------------------------------------------------------
 def warn(message):
     '''Client logger function.'''
-    if not _enabled:
-        return
-
-    _write_log('WRN', message)
+    if _enabled:
+        _write_log('WRN', message)
 
 #-------------------------------------------------------------------------------
 def info(message):
     '''Client logger function.'''
-    if not _enabled:
-        return
-
-    _write_log('INF', message)
+    if _enabled:
+        _write_log('INF', message)
 
 #-------------------------------------------------------------------------------
 def debug(message):
     '''Client logger function.'''
-    if not _enabled:
-        return
+    if _enabled:
+        _write_log('DBG', message)
 
-    _write_log('DBG', message)
+#-------------------------------------------------------------------------------
+def dump():
+    '''Diagnostic.'''
+    return f'plog name:{_name} mode:{_mode} readable:{_readable} fn:{_log_fn} max:{_max} line_cnt:{_line_cnt}'
 
 
 #-------------------------------------------------------------------------------
@@ -151,17 +146,14 @@ def debug(message):
 #-------------------------------------------------------------------------------
 def _write_log(slevel, message, tb=None):
     '''Format a standard message with caller info and log it.'''
-    global _enabled
+    global _enabled, _line_cnt, _f
 
     if _f is None:
         _enabled = False
         raise RuntimeError('Logger has not been initialized.')
 
-    # # Sometimes get stray empty lines.
-    # if len(message) == 0:
-    #     return
-    # if len(message) == 1 and message[0] == '\n':
-    #     return
+    if _readable:
+        message = _make_readable(message)
 
     # Get caller info.
     frame = sys._getframe(2)
@@ -174,21 +166,33 @@ def _write_log(slevel, message, tb=None):
     time_str = f'{str(datetime.datetime.now())}'[0:-3]
     out_line = f'{time_str} : {slevel} {_name} {fn}({line}) {message}'
 
-    stb = None
-    if tb is not None:
-        # The traceback formatter is a bit ugly - clean it up.
-        tblines = []
-        for s in traceback.format_tb(tb):
-            if len(s) > 0:
-                tblines.append(s[:-1])
-        stb = '\n'.join(tblines)
-
     with _lock:
-        # Write the record.
-        _f.write(out_line + '\n')
-        if stb:
-            _f.write(stb + '\n')
-        # _f.flush()
+        # Write the main record.
+        _line_cnt += 1
+        # _f.write(f'{out_line} {_line_cnt}\n')
+        _f.write(out_line)
+        _f.write('\n')
+
+        # traceback?
+        if tb is not None:
+            for tbline in traceback.format_tb(tb):
+                for s in tbline.splitlines():
+                    _line_cnt += 1
+                    # _f.write(f'{s} {_line_cnt}\n')
+                    _f.write(s)
+                    _f.write('\n')
+
+        # Check limit.
+        if _line_cnt >= _max:
+            print('>>>', _line_cnt, _max)
+
+            _f.flush()
+            _f.close()
+            old_fn = _log_fn.replace('.log', '_old.log')
+            if exists(old_fn): os.remove(old_fn)
+            os.rename(_log_fn, old_fn)
+            _f = open(_log_fn, _mode)
+            _line_cnt = 0
 
 #-------------------------------------------------------------------------------
 def _make_readable(s):

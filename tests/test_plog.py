@@ -1,7 +1,6 @@
 import sys
 import os
 import datetime
-import importlib
 import unittest
 
 
@@ -9,34 +8,56 @@ import unittest
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if npath not in sys.path:
     sys.path.insert(0, npath)
-
-# OK to import now.
 import plog
-# Benign reload in case it's edited.
-# importlib.reload(plog)
 
 
 #-----------------------------------------------------------------------------------
 class TestPlog(unittest.TestCase): # TODO1
 
     def setUp(self):
-        pass
+        self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'plog_test.log'))
 
     def tearDown(self):
         pass
 
     def test_success(self):
-        pass
-        # trace_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'tracer.log'))
-        # tr.start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')'))
+        try: os.remove(self.log_fn)
+        except: pass
+        plog.init('PLOG1', self.log_fn, max=100)
+        plog.setEnable(True)
 
-        # T(f'Start {do_a_suite.__name__}:{do_a_suite.__doc__} {datetime.datetime.now()}')
-        # do_a_suite(number=911, alpha='abcd')  # named args
-        # tr.stop()  # Always clean up resources!!
+        plog.info(f'================= START PLOG1 =======================')
+        for i in range(20):
+            plog.info(f'Info message {i}')
+            plog.warn(f'Warning message {i}')
+            plog.debug(f'Debug message {i}')
+            plog.error(f'Error message {i}')
+            try:
+                raise ValueError('I am very bad')
+            except Exception as e:
+                plog.error(f'Error message exc {i}', e)
+        plog.info(f'================= STOP PLOG1 =======================')
 
-        # # Examine generated contents.
-        # lines = []
-        # with open(trace_fn) as f:
-        #     lines = f.readlines()
+        # Examine generated contents.
+        plog.stop()
+        lines = []
+        with open(self.log_fn) as f:
+            lines = f.readlines()
+        self.assertEqual(len(lines), 42)
 
-        # self.assertEqual(len(lines), 25)
+        # def test_overwrite(self):
+        plog.init('PLOG2', self.log_fn, append=False)
+        plog.setEnable(True)
+
+        plog.info(f'================= START PLOG1 =======================')
+        plog.info(f'Info message only')
+        plog.warn(f'Warning message only')
+        plog.debug(f'Debug message only')
+        plog.info(f'================= STOP PLOG1 =======================')
+
+        # Examine generated contents.
+        plog.stop()
+        lines = []
+        with open(self.log_fn) as f:
+            lines = f.readlines()
+        self.assertEqual(len(lines), 5)

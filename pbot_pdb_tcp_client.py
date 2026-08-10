@@ -13,7 +13,6 @@ import traceback
 #############################################################################
 
 # Probably could be general purpose. TODO1 remove or combine with UDP
-# TODO1 plog
 
 #------------------------------------------------------------------------------
 #------------------------- Configuration start --------------------------------
@@ -198,7 +197,7 @@ class PbotPdbClient(object):
         while not self.cmd_queue.empty():
             self.cmd_queue.get()
 
-    def do_error(self, e):
+    def do_error(self, e):# TODO1 new plog all these - not do_
         '''Log, tell, exit. All are considered fatal.'''
         self.write_log('ERR', str(e), e.__traceback__)
         sys.stdout.write(f'{MSG_IND} Error: {e}\n')

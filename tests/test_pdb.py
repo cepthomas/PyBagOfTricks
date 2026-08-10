@@ -6,19 +6,15 @@ import importlib
 ######################################################
 # This is not a python unittest.
 # use:
-#   run a TCP/UDP client e.g. NTerm udp localhost 59140
-#   then py test_pdb
+#   - run a TCP/UDP client on localhost:59140
+#   - py test_pdb
 ######################################################
 
 # Add code-under-test path to sys.
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if npath not in sys.path:
     sys.path.insert(0, npath)
-
-# OK to import now.
 import pbot_pdb
-# Benign reload in case it's edited.
-# importlib.reload(pbot_pdb)
 
 
 

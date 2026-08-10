@@ -1,24 +1,13 @@
 import sys
 import os
 import datetime
-import importlib
 import unittest
-
-
-
-# #os.path.join(_store_path, f'{_plugin_name}.log')
-
-
 
 # Add code-under-test path to sys.
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if npath not in sys.path:
     sys.path.insert(0, npath)
-
-# OK to import now.
 import tracer as tr
-# Benign reload in case it's edited.
-# importlib.reload(tr)
 
 
 # Some optional shorthand.
@@ -128,7 +117,7 @@ class TestTracer(unittest.TestCase):
         pass
 
     def test_success(self):
-        trace_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'tracer.log'))
+        trace_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'tracer_test.log'))
         tr.start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')'))
 
         T(f'Start {do_a_suite.__name__}:{do_a_suite.__doc__} {datetime.datetime.now()}')
