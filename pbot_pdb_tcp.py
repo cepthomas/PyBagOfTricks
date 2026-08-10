@@ -4,33 +4,21 @@ import pdb
 import os
 import datetime
 import traceback
+import plog
 
-#############################################################################
 # TCP server for embedding in python scripts for debugging purposes.
 # Basically creates a remote pdb debugging interface.
-# Use with companion pbot_pdb_client.py or your other favorite terminal.
-#############################################################################
-
-# TODO1 plog
-
-#------------------------------------------------------------------------------
-#------------------------- Configuration start --------------------------------
-#------------------------------------------------------------------------------
 
 # Where to log. Usually same as the client log. None indicates no logging.
-LOG_FN = os.path.join(os.path.dirname(__file__), 'ppdb.log')
+LOG_FN = os.path.join(os.path.dirname(__file__), 'out', 'ppdb.log')
 
-# TCP host.
 HOST = '127.0.0.1'
-
-# TCP port
 PORT = 59120
+# Delimiter for socket message lines.
+MDEL = '\n'
 
 # Client connect seconds after breakpoint() called 0=forever
-CONNECT_TIMEOUT = 5
-
-# Indicate internal message (not pdb)
-MSG_IND = '!'
+TIMEOUT = 5
 
 # Server provides ansi color (https://en.wikipedia.org/wiki/ANSI_escape_code)
 USE_COLOR = True
@@ -40,18 +28,11 @@ STACK_LOCATION_COLOR = 96 # cyan
 PROMPT_COLOR = 94 # blue
 ERROR_COLOR = 91 # red
 
-# Delimiter for socket message lines.
-MDEL = '\n'
 
 #------------------------------------------------------------------------------
-#------------------------- Configuration end ----------------------------------
-#------------------------------------------------------------------------------
-
-
-#------------------------------------------------------------------------------
-class CommIf(object):
+class TcpIf(object):
     '''
-    Read/write interface to socket. Makes server socket look like a file.
+    Read/write interface to socket. Makes server socket look like a file object.
     Also handles encoding, color, line endings etc.
     Catches exceptions for the purpose of logging only. They are re-raised.
     '''
@@ -70,12 +51,15 @@ class CommIf(object):
         self.flush = fh.flush
         self.fileno = fh.fileno
 
+    # --------------- Required interface ---------------
+    # per https://docs.python.org/3/library/io.html#io.TextIOBase
+
     @property
     def encoding(self):
         return self.stream.encoding
 
     def send(self, msg):
-        # self.do_debug(f'send(): {make_readable(msg)}')
+        # plog.debug(f'send(): {make_readable(msg)}')
         self.conn.sendall(msg.encode())
 
     def readline(self, size=1):
@@ -84,15 +68,15 @@ class CommIf(object):
         try:
             msg = self.stream.readline()
             self.last_cmd = msg
-            # self.do_debug(f'Received command: {make_readable(msg)}')
+            # plog.debug(f'Received command: {make_readable(msg)}')
             return self.last_cmd
 
         except (ConnectionError, socket.timeout) as e:
-            self.do_debug(f'Disconnected: {type(e)}')
+            plog.debug(f'Disconnected: {type(e)}')
             raise
 
         except Exception as e:
-            self.do_debug(f'CommIf.readline() other exception: {str(e)}')
+            plog.debug(f'TcpIf.readline() other exception: {str(e)}')
             self.buff = ''
             raise
 
@@ -119,7 +103,9 @@ class CommIf(object):
 
                     self.send(f'{s}{MDEL}' if color is None else f'\u001b[{color}m{s}\u001b[0m{MDEL}')
 
-                self.prompt()
+                # Write prompt.
+                self.send(f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if USE_COLOR else '(Pdb)')
+                # plog.debug(f'write(): {msg}')
 
                 # Reset buffer.
                 self.buff = ''
@@ -128,62 +114,57 @@ class CommIf(object):
                 self.buff += line
 
         except (ConnectionError, socket.timeout) as e:
-            self.do_debug(f'Disconnected: {type(e)}')
+            plog.debug(f'Disconnected: {type(e)}')
             raise
 
         except Exception as e:
-            self.do_debug(f'CommIf.write() other exception: {str(e)}')
+            plog.debug(f'TcpIf.write() other exception: {str(e)}')
             self.buff = ''
             raise
 
-    def do_debug(self, msg):
-        '''Log only.'''
-        write_log('DBG', msg)
-
-    def prompt(self):
-        s = f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if USE_COLOR else '(Pdb)'
-        self.send(s)
-
 
 #------------------------------------------------------------------------------
-class PbotPdb(pdb.Pdb):
+class PbotPdbTcp(pdb.Pdb):
     '''Run pdb behind a blocking tcp server.'''
 
     def __init__(self):
         '''Construction.'''
         try:
+            plog.init('PPBD', LOG_FN, readable=True)
+            plog.setEnable(True)
+
             self.sock = None
             self.commif = None
             self.active_instance = None
 
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            if CONNECT_TIMEOUT > 0:
-                self.sock.settimeout(CONNECT_TIMEOUT)  # Seconds.
+            if TIMEOUT > 0:
+                self.sock.settimeout(TIMEOUT)  # Seconds.
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
             self.sock.bind((HOST, PORT))
-            self.do_info(f'Server started on {HOST}:{PORT} - waiting for connection.')
+            plog.info(f'Server started on {HOST}:{PORT} - waiting for connection.')
 
             # Blocks until client connect or timeout.
             self.sock.listen(1)
             conn, address = self.sock.accept()
 
             # Connected.
-            self.do_info(f'Server accepted connection from {repr(address)}.')
-            self.commif = CommIf(conn)
+            plog.info(f'Server accepted connection from {repr(address)}.')
+            self.commif = TcpIf(conn)
             super().__init__(completekey='tab', stdin=self.commif, stdout=self.commif)  # pyright: ignore
             PbotPdb.active_instance = self
 
         except (ConnectionError, socket.timeout) as e:
-            self.do_info(f'Server connection timed out, try again: {str(e)}')
+            plog.info(f'Server connection timed out, try again: {str(e)}')
             self.do_quit()
 
         except Exception as e:
             # Other error handler.
-            self.do_error(e)
+            plog.error('init fail', e)
 
     def breakpoint(self, frame):
         '''Starts the debugger.'''
-        self.do_debug('breakpoint() entry')
+        plog.debug('breakpoint() entry')
         if self.commif is not None:
             try:
                 # This blocks until user says done.
@@ -191,14 +172,15 @@ class PbotPdb(pdb.Pdb):
 
             except Exception as e:
                 # Exceptions in the code under test go to sys.excepthook so this doesn't do anything.
-                self.do_error(e)
+                plog.error('breakpoint fail', e)
 
-        self.do_debug('breakpoint() exit')
+        plog.debug('breakpoint() exit')
         self.do_quit()
 
+    # --------------- Custom user cmds ---------------
     def do_quit(self, arg=None):
         '''Stopping debugging, clean up resources, exit application.'''
-        self.do_info('Server quitting.')
+        plog.info('Server quitting.')
 
         if self.commif is not None:
             self.commif.close()
@@ -215,43 +197,7 @@ class PbotPdb(pdb.Pdb):
         except:
             pass
             # do_debug('do_quit() exit')
-
-    def do_error(self, e):
-        '''Log, tell, exit. All are considered fatal. Exit the application. User needs to restart debugger.'''
-        write_log('ERR', str(e), e.__traceback__)
-        sys.stdout.write(f'{MSG_IND} Server Error: {e}\n')
-        sys.stdout.flush()
-        self.do_quit()
-
-    def do_info(self, msg):
-        '''Log, tell.'''
-        write_log('INF', msg)
-        sys.stdout.write(f'{MSG_IND} {msg}\n')
-        sys.stdout.flush()
-
-    def do_debug(self, msg):
-        '''Log only.'''
-        write_log('DBG', msg)
-
-    def make_readable(self, s):
-        '''So we can see things like LF, CR, ESC in log.'''
-        s = s.replace('\n', '_N').replace('\r', '_R').replace('\u001b', '_E')
-        return s
-
-
-#------------------------------------------------------------------------------
-def write_log(level, msg, tb=None):
-    '''Format a standard message with caller info and log it.'''
-    if LOG_FN is None:
-        return
-    frame = sys._getframe(2)
-    time_str = f'{str(datetime.datetime.now())}'[0:-3]
-    with open(LOG_FN, 'a') as log:
-        out_line = f'{time_str} {level} SRV {frame.f_lineno} {msg}'
-        log.write(out_line + '\n')
-        if tb is not None:
-            log.write('\n'.join(traceback.format_tb(tb)) + '\n')
-        log.flush()
+    do_q = do_quit # alias
 
 
 #------------------------------------------------------------------------------
@@ -259,6 +205,3 @@ def breakpoint():
     '''Opens a remote PDB. See test_sbot_pdb.py.'''
     ppdb = PbotPdb()
     ppdb.breakpoint(sys._getframe().f_back)
-
-
-# write_log('DBG', 'sbot_pdb module loaded')
