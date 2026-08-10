@@ -51,7 +51,7 @@ _line_cnt = 0
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-def init(name, fn, append=True, readable=False max=1000):
+def init(name, fn, append=True, readable=False, max=1000):
     ''' Start the file '''
     global _name, _log_fn, _mode, _max, _f, _enabled
 

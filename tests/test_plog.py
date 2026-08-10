@@ -4,7 +4,7 @@ import datetime
 import unittest
 
 
-# Add code-under-test path to sys.
+# Add code-under-test path to sys. TODO more elegant way?
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if npath not in sys.path:
     sys.path.insert(0, npath)
@@ -12,7 +12,7 @@ import plog
 
 
 #-----------------------------------------------------------------------------------
-class TestPlog(unittest.TestCase): # TODO1
+class TestPlog(unittest.TestCase):
 
     def setUp(self):
         self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'plog_test.log'))

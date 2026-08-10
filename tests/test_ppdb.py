@@ -2,13 +2,16 @@ import sys
 import os
 import importlib
 
-
+doc = '''
 ######################################################
 # This is not a python unittest.
 # use:
-#   - run a TCP/UDP client on localhost:59140
+#   - run one of:
+#     - UDP client on localhost:59140
+#     - TCP client on localhost:59120
 #   - py test_pdb
 ######################################################
+'''
 
 # Add code-under-test path to sys.
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -45,7 +48,7 @@ class TestPbotPdb():
     def tearDown(self):
         pass
 
-    #-----------------------------------------------------------------------------------
+    #----------------------------------------------------------
     def go(self):
 
         # Set a breakpoint here then step through and examine the code.
@@ -131,4 +134,4 @@ if __name__ == "__main__":
     t = TestPbotPdb()
     t.go()
 else:
-    print('!!!This is not a python unit test. Run it from command line')
+    print(doc)

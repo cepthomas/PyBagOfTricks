@@ -7,19 +7,17 @@ import queue
 import datetime
 import traceback
 
+# Add path to logger.
+npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if npath not in sys.path:
+    sys.path.insert(0, npath)
+import plog
 
-#############################################################################
+
 # TCP client that is pbot_pdb.py aware.
-#############################################################################
-
-# Probably could be general purpose. TODO1 remove or combine with UDP
-
-#------------------------------------------------------------------------------
-#------------------------- Configuration start --------------------------------
-#------------------------------------------------------------------------------
 
 # Where to log. Usually same as the server log. None indicates no logging.
-LOG_FN = os.path.join(os.path.dirname(__file__), 'ppdb.log')
+LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
 
 # TCP host.
 HOST = '127.0.0.1'
@@ -27,15 +25,8 @@ HOST = '127.0.0.1'
 # TCP port
 PORT = 59120
 
-# Indicate internal message (not pdb)
-MSG_IND = '!'
-
 # Delimiter for socket message lines.
 MDEL = '\n'
-
-#------------------------------------------------------------------------------
-#------------------------- Configuration end ----------------------------------
-#------------------------------------------------------------------------------
 
 
 #------------------------------------------------------------------------------
@@ -44,6 +35,8 @@ class PbotPdbClient(object):
 
     def __init__(self):
         '''Construction.'''
+        plog.init('TCPC', LOG_FN, readable=True)
+        plog.setEnable(True)
 
         self.sock = None
         self.commif = None
@@ -60,13 +53,13 @@ class PbotPdbClient(object):
         # Last command time. Non zero implies waiting for a response.
         self.sendts = 0
 
-        self.do_debug(f'Constructing client')
+        plog.debug(f'Constructing client')
 
     def go(self):
         '''Run the main loop.'''
 
         try:
-            self.do_info(f'Starting client on {HOST}:{PORT}')
+            plog.info(f'Starting client on {HOST}:{PORT}')
             run = True
 
             ##### Run user cli input in a thread.
@@ -92,7 +85,7 @@ class PbotPdbClient(object):
 
                         # Didn't fault so must be success.
                         self.commif = self.sock.makefile('rw')
-                        self.do_info('Connected to server')
+                        plog.info('Connected to server')
 
                     except TimeoutError:
                         # Server is not running or not listening right now. Normal operation.
@@ -102,18 +95,18 @@ class PbotPdbClient(object):
                     except ConnectionError as e:
                         # BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError.
                         # Ignore and retry later.
-                        self.do_debug(f'ConnectionError: {type(e)}')
+                        plog.debug(f'ConnectionError: {type(e)}')
                         self.reset()
 
                     except Exception as e:
                         # Other unexpected error.
-                        self.do_error(e)
+                        plog.error('unexpected', e)
 
                 ##### Check for server not responding but still connected. #####
                 if self.commif is not None and self.sendts > 0:
                     dur = self.get_msec() - self.sendts
                     if dur > self.server_response_time:
-                        self.do_info('Server not listening')
+                        plog.info('Server not listening')
                         self.reset()
 
                 ##### Anything to send? Check for user input. #####
@@ -127,7 +120,7 @@ class PbotPdbClient(object):
                         # Measure round trip for timeout.
                         self.sendts = self.get_msec()
                     else:
-                        self.do_info('Execute command failed - not connected')
+                        plog.info('Execute command failed - not connected')
 
                 ##### Get any server responses. #####
                 if self.commif is not None:
@@ -158,13 +151,13 @@ class PbotPdbClient(object):
                         self.reset()
 
                     except Exception as e:
-                        self.do_error(e)
+                        plog.error('wtf', e)
 
                 ##### If there was no timeout, delay a bit. #####
                 slp = (float(self.loop_time) / 1000.0) if timed_out else 0
                 time.sleep(slp)
 
-            self.do_debug('go() run ended')
+            plog.debug('go() run ended')
 
         except KeyboardInterrupt:
             # Hard shutdown, ignore and quit.
@@ -172,7 +165,7 @@ class PbotPdbClient(object):
 
         except Exception as e:
             # Other unexpected errors.
-            self.do_error(e)
+            plog.error('other', e)
 
         self.quit(0)
 
@@ -197,36 +190,6 @@ class PbotPdbClient(object):
         while not self.cmd_queue.empty():
             self.cmd_queue.get()
 
-    def do_error(self, e):# TODO1 new plog all these - not do_
-        '''Log, tell, exit. All are considered fatal.'''
-        self.write_log('ERR', str(e), e.__traceback__)
-        sys.stdout.write(f'{MSG_IND} Error: {e}\n')
-        sys.stdout.flush()
-        self.quit(1)
-
-    def do_info(self, msg):
-        '''Log, tell.'''
-        self.write_log('INF', msg)
-        sys.stdout.write(f'{MSG_IND} {msg}\n')
-        sys.stdout.flush()
-
-    def do_debug(self, msg):
-        '''Log only.'''
-        self.write_log('DBG', msg)
-
-    def write_log(self, level, msg, tb=None):
-        '''Format a standard message with caller info and log it.'''
-        if LOG_FN is None:
-            return
-        frame = sys._getframe(2)
-        time_str = f'{str(datetime.datetime.now())}'[0:-3]
-        with open(LOG_FN, 'a') as log:
-            out_line = f'{time_str} {level} CLI {frame.f_lineno} {msg}'
-            log.write(out_line + '\n')
-            if tb is not None:
-                log.write('\n'.join(traceback.format_tb(tb)) + '\n')
-            log.flush()
-
     def quit(self, code):
         '''Clean up and go home.'''
         self.reset()
@@ -235,12 +198,8 @@ class PbotPdbClient(object):
             self.sock = None
         sys.exit(code)
 
-    def make_readable(self, s):
-        '''So we can see things like LF, CR, ESC in log.'''
-        return s.replace('\n', '_N').replace('\r', '_R').replace('\u001b', '_E')
 
 #------------------------------------------------------------------------------
 if __name__ == '__main__':
-
     client = PbotPdbClient()
     client.go()

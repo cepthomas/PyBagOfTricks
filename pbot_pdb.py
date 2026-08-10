@@ -14,17 +14,19 @@ import plog
 LOG_FN = os.path.join(os.path.dirname(__file__), 'log', 'ppdb.log')
 
 HOST = '127.0.0.1'
-PORT = 59140
-ENCODING = 'utf-8'
-# Delimiter for socket message lines.
-MDEL = '\n'
+PORT = 59140 # UDP
+# PORT = 59120 # TCP
 
-# Client connect seconds after breakpoint() called 0=forever.
+# Probably UDP only.
+ENCODING = 'utf-8'
+# Delimiter for socket message lines. TODO support none so UDP can have inline \n etc.
+MDEL = '\n'
+# Timeout. Means different things depending on TCP/UDP.
 TIMEOUT = 5
-# Add sequence number to all messages. Simple loss detection.
+# Add sequence number to all UDP messages. Simple loss detection.
 SEQ_NUM = True
 
-# Server provides ansi color (https://en.wikipedia.org/wiki/ANSI_escape_code)
+# Ansi color (https://en.wikipedia.org/wiki/ANSI_escape_code)
 USE_COLOR = False
 CURRENT_LINE_COLOR = 93 # yellow
 EXCEPTION_LINE_COLOR = 92 # green
@@ -166,14 +168,8 @@ class PbotPdb(pdb.Pdb):
             plog.setEnable(True)
 
             self.commif = UdpIf()
-            super().__init__(stdin=self.commif, stdout=self.commif)  # pyright: ignore
-            # TODO1?? colorize=False - enable colorized output in the debugger, if color is supported.
-            #   This will highlight source code displayed in pdb
-            # mode=None - specifies how the debugger was invoked. It impacts the workings of some debugger commands.
-            #   Valid values are 'inline' (used by the breakpoint() builtin), 'cli' (used by the command line invocation)
-            #   or None (for backwards compatible behaviour, as before the mode argument was added).
-            # skip=None - iterable of glob-style module name patterns. The debugger will not step into frames that
-            #   originate in a module that matches one of these patterns.
+            super().__init__(stdin=self.commif, stdout=self.commif, skip=None)  # pyright: ignore
+            # TODO 3.14 colorize=True  mode=???   lse - enable colorized output in the debugger, if color is supported.
 
         except Exception as e:
             # Error handler. ?? ConnectionError, socket.timeout
