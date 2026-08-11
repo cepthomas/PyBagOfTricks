@@ -4,15 +4,16 @@ import pdb
 import os
 import datetime
 import traceback
-import plog
+import plog # TODO1 fights with sbot logging.
+
 
 # UDP or TCP server for embedding in python scripts for debugging purposes.
 # Basically creates a remote pdb debugging interface.
-# TODO finesse two flavors in same file?
+# TODO1 finesse two flavors in same file? Maybe not if UDP works ok. PbotPdbTcp
 
 
 # ---------------------- Configuration ----------------------------------
-# TODO Make configurable later?
+# TODO1 Make configurable?
 
 # Where to log. Usually same as the client log. None indicates no logging.
 LOG_FN = os.path.join(os.path.dirname(__file__), 'log', 'pbot_pdb.log')

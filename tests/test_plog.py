@@ -4,7 +4,7 @@ import datetime
 import unittest
 
 
-# Add code-under-test path to sys. TODO more elegant way?
+# Add code-under-test path to sys.
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if npath not in sys.path:
     sys.path.insert(0, npath)

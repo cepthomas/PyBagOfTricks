@@ -164,7 +164,7 @@ def _write_log(slevel, message, tb=None):
     # f'class_name = {frame.f_locals["self"].__class__.__name__}'
 
     time_str = f'{str(datetime.datetime.now())}'[0:-3]
-    out_line = f'{time_str} : {slevel} {_name} {fn}({line}) {message}'
+    out_line = f'{time_str} {slevel} {_name} {fn}({line}) {message}'
 
     with _lock:
         # Write the main record.
@@ -179,13 +179,10 @@ def _write_log(slevel, message, tb=None):
                 for s in tbline.splitlines():
                     _line_cnt += 1
                     # _f.write(f'{s} {_line_cnt}\n')
-                    _f.write(s)
-                    _f.write('\n')
+                    _f.write(s + '\n')
 
         # Check limit.
         if _line_cnt >= _max:
-            print('>>>', _line_cnt, _max)
-
             _f.flush()
             _f.close()
             old_fn = _log_fn.replace('.log', '_old.log')
@@ -196,7 +193,7 @@ def _write_log(slevel, message, tb=None):
 
 #-------------------------------------------------------------------------------
 def _make_readable(s):
-    '''So we can see things like LF, CR, ESC in log.'''
+    '''So we can see things like LF, CR, ESC in log. TODO user-supplied list.'''
     s = s.replace('\n', '_N').replace('\r', '_R').replace('\u001b', '_E')
     return s
 

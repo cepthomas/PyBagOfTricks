@@ -14,20 +14,15 @@ if npath not in sys.path:
 import plog
 
 
-# TCP client that is pbot_pdb.py aware.
-
-# Fancy Client
-# Optionally you can use the smarter `pbot_pdb_client.py` script which does all of the above plus:
+# Fancier Generic TCP Client
 # - Automatically connects to the server. This means that you can edit/run your code
 #   without having to restart the client.
 # - Detects unresponsive server by requiring a response for each command sent.
-# - Provides some extra system status information, indicated by `!` (or marker of your choosing).
-# - Workflow is similar to the above except you can now reload/run the code as part of your dev/edit cycle.
+# - Provides some extra system status information, indicated by `!`.
 # - Optionally edit the configuration block in this file.
 # - Use ctrl-C to exit the client. The server will also stop/unblock.
-# ![Fancy Client](cli2.png)
 
-# Where to log. Usually same as the server log. None indicates no logging.
+# Where to log. None indicates no logging.
 LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
 
 # TCP host.
@@ -39,6 +34,8 @@ PORT = 59120
 # Delimiter for socket message lines.
 MDEL = '\u000A' # NL
 
+# Indicate internal message
+MSG_IND = '!'
 
 #------------------------------------------------------------------------------
 class PbotPdbClient(object):
@@ -68,9 +65,10 @@ class PbotPdbClient(object):
 
     def go(self):
         '''Run the main loop.'''
-
         try:
-            plog.info(f'Starting client on {HOST}:{PORT}')
+            s = f'Starting client on {HOST}:{PORT}'
+            plog.info(s)
+            self.tell_user(s)
             run = True
 
             ##### Run user cli input in a thread.
@@ -96,7 +94,9 @@ class PbotPdbClient(object):
 
                         # Didn't fault so must be success.
                         self.commif = self.sock.makefile('rw')
-                        plog.info('Connected to server')
+                        s = 'Connected to server'
+                        plog.info(s)
+                        self.tell_user(s)
 
                     except TimeoutError:
                         # Server is not running or not listening right now. Normal operation.
@@ -111,13 +111,17 @@ class PbotPdbClient(object):
 
                     except Exception as e:
                         # Other unexpected error.
-                        plog.error('unexpected', e)
+                        s = f'unexpected'
+                        plog.error(s, e)
+                        self.tell_user(s)
 
                 ##### Check for server not responding but still connected. #####
                 if self.commif is not None and self.sendts > 0:
                     dur = self.get_msec() - self.sendts
                     if dur > self.server_response_time:
-                        plog.info('Server not listening')
+                        s = 'Server not listening'
+                        plog.info(s)
+                        self.tell_user(s)
                         self.reset()
 
                 ##### Anything to send? Check for user input. #####
@@ -131,7 +135,9 @@ class PbotPdbClient(object):
                         # Measure round trip for timeout.
                         self.sendts = self.get_msec()
                     else:
-                        plog.info('Execute command failed - not connected')
+                        s = 'Execute command failed - not connected'
+                        plog.info(s)
+                        self.tell_user(s)
 
                 ##### Get any server responses. #####
                 if self.commif is not None:
@@ -162,7 +168,9 @@ class PbotPdbClient(object):
                         self.reset()
 
                     except Exception as e:
-                        plog.error('wtf', e)
+                        s = f'wtf'
+                        plog.error(s, e)
+                        self.tell_user(s)
 
                 ##### If there was no timeout, delay a bit. #####
                 slp = (float(self.loop_time) / 1000.0) if timed_out else 0
@@ -176,9 +184,15 @@ class PbotPdbClient(object):
 
         except Exception as e:
             # Other unexpected errors.
-            plog.error('other', e)
+            s = f'other'
+            plog.error(s, e)
+            self.tell_user(s)
 
         self.quit(0)
+
+    def tell_user(self, msg):
+        '''Tell user something.'''
+        sys.stdout.write(f'{MSG_IND} {msg}\n')
 
     def get_msec(self):
         '''Get current msec.'''

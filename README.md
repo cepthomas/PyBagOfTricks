@@ -1,8 +1,6 @@
-
 # PyBagOfTricks
 
 Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
-
 
 # PbotPdb 
 
@@ -56,7 +54,7 @@ sys.excepthook = excepthook
 # Plog
 Dumb simple logger for python. One per client module.
 
-TODO Copy or import?
+TODO1 usage: copy or import?
 
 
 # Tracer

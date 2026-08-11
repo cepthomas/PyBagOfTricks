@@ -5,7 +5,6 @@ import importlib
 import random
 import time
 
-# 
 
 # Add path to logger.
 npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -15,7 +14,7 @@ import plog
 
 
 # Where to log. Usually same as the server log. None indicates no logging.
-LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
+LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'udp_sender.log')
 
 HOST = '127.0.0.1' # 'localhost'
 PORT = 59140
@@ -26,11 +25,25 @@ TIMEOUT = 5
 
 seq_num = 0
 
-
-lines = []
-with open('ross_1.txt') as f:
-    lines = f.readlines()
-
+lines = [
+    "===first-line-ross===",
+    "We can always carry this a step further. There's really no end to this.",
+    "Here's some embedded ansi color codes! [38;2;204;39;187mYou have freedom here.[0mThe only guide is your heart.",
+    "Let's give him a friend too. Everybody needs a friend. Follow the lay of the land. It's most important. Only eight colors that you need. Now we can begin working on lots of happy little things. Even the worst thing we can do here is good.",
+    "Nothing wrong with washing your brush. What the devil. Fluff that up.",
+    "You have freedom here. The only guide is your heart. We can always carry this a step further. There's really no end to this. ",
+    "I really recommend you use odorless thinner or your spouse is gonna run you right out into the yard and you'll be working by yourself.",
+    "Let's give him a friend too. Everybody needs a friend. Follow the lay of the land. It's most important. Only eight colors that you need. ",
+    "Now we can begin working on lots of happy little things. Even the worst thing we can do here is good.",
+    "Let's do it again then, what the heck. Everything's not great in life, but we can still find beauty in it.",
+    "Use what happens naturally, don't fight it. How do you make a round circle with a square knife? That's your challenge for the day. These little son of a guns hide in your brush and you just have to push them out.",
+    "If it's not what you want - stop and change it. Don't just keep going and expect it will get better.",
+    "Let all these things just sort of happen. As trees get older they lose their chlorophyll. So often we avoid running water, and running water is a lot of fun. And just raise cain. You don't have to be crazy to do this but it does help.",
+    "This is a happy place, little squirrels live here and play. We'll do another happy little painting.",
+    "Exercising the imagination, experimenting with talents, being creative; these things, to me, are truly the windows to your soul.",
+    "Once you start, they sort of just make themselves.",
+    "===last-line-ross===",
+    ]
 
 # Send function.
 def send(msg):
