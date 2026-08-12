@@ -7,22 +7,18 @@ import traceback
 import shutil
 
 
-
 # ---------------------- Configuration ----------------------------------
-# TODO Make configurable by client cmd line?
+# TODO Make some/all configurable by client cmd line?
 
-### REQUIRED ###
-MODE = 'UDP' # OR 'TCP'
-HOST = '127.0.0.1'  
-PORT = 59140 # typ UDP  59120 for TCP
+### Required.
+MODE = 'NONE' #'UDP' OR 'TCP'
+PORT = -1
 
-### OPTIONAL ###
+### Optional.
+HOST = '127.0.0.1'
+
 # Where to log. None indicates no logging.
 LOG_FN = os.path.join(os.path.dirname(__file__), 'log', 'pbot_pdb.log')
-
-# Timeout. Means different things depending on TCP/UDP.
-TIMEOUT = 1 # UDP
-# TIMEOUT = 5 # TCP
 
 # Add sequence number to UDP messages. Simple loss detection.
 SEQ_NUM = True
@@ -39,6 +35,12 @@ PROMPT_COLOR = 94 # blue
 ERROR_COLOR = 91 # red
 
 
+# ---------------------- Vars ----------------------------------
+
+# Timeout. Means different things depending on mode.
+_timeout = -1
+
+
 #------------------------------------------------------------------------------
 class PbotPdb(pdb.Pdb):
     '''Custom pdb using UDP.'''
@@ -46,6 +48,8 @@ class PbotPdb(pdb.Pdb):
     # --------------- Construction ---------------
     def __init__(self):
         '''Construction.'''
+        global _timeout
+        
         try:
             # Initialize logging. Maybe roll over log now.
             if LOG_FN and os.path.exists(LOG_FN) and os.path.getsize(LOG_FN) > 50000:
@@ -55,9 +59,14 @@ class PbotPdb(pdb.Pdb):
                 with open(LOG_FN, 'w'):
                     pass
 
-            if MODE.upper() == 'UDP': self.init_udp()
-            elif MODE.upper() == 'TCP': self.init_tcp()
-            else: error('Invalid MODE')
+            if MODE.upper() == 'UDP':
+                _timeout = 1
+                self.init_udp()
+            elif MODE.upper() == 'TCP':
+                _timeout = 5
+                self.init_tcp()
+            else:
+                error('Invalid MODE')
 
             # Init base.
             super().__init__(stdin=self.commif, stdout=self.commif, skip=None)  # pyright: ignore
@@ -77,10 +86,10 @@ class PbotPdb(pdb.Pdb):
             self.sock = None
             self.commif = None
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            if TIMEOUT > 0:
-                self.sock.settimeout(TIMEOUT)  # Seconds.
+            if _timeout > 0:
+                self.sock.settimeout(_timeout)  # Seconds.
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-            self.sock.bind((HOST, PORT))
+            self.sock.bind((MODE, PORT))
             info(f'Server started on {HOST}:{PORT} - waiting for connection.')
             # Blocks until client connect or timeout.
             self.sock.listen(1)
@@ -168,9 +177,9 @@ class UdpIf(object):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((HOST, PORT))
-            if TIMEOUT > 0:
-                sock.settimeout(TIMEOUT)  # Seconds.
-            debug(f'UDP on {HOST}:{PORT} [{TIMEOUT}]')
+            if _timeout > 0:
+                sock.settimeout(_timeout)  # Seconds.
+            debug(f'UDP on {HOST}:{PORT} [{_timeout}]')
 
             while msg is None and not exit:
                 try:
@@ -260,6 +269,9 @@ class TcpIf(object):
     Catches exceptions for the purpose of logging only. They are re-raised.
     '''
 
+    # TCP: The line terminator is always b'\n' for binary files
+    # for text files, the newline argument to open() can be used to select the line terminator(s) recognized.
+
     def __init__(self, conn):
         self.conn = conn
         self.last_cmd = None
@@ -271,8 +283,6 @@ class TcpIf(object):
         self.close = fh.close
         self.flush = fh.flush
         self.fileno = fh.fileno
-
-# The line terminator is always b'\n' for binary files; for text files, the newline argument to open() can be used to select the line terminator(s) recognized.
 
     def __iter__(self):
         return self.stream.__iter__()
@@ -383,4 +393,3 @@ def breakpoint():
     '''Opens a remote PDB.'''
     ppdb = PbotPdb()
     ppdb.breakpoint(sys._getframe().f_back)
-

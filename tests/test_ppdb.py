@@ -1,6 +1,7 @@
 import sys
 import os
 import importlib
+import unittest
 
 
 # This is an example of using ppdb in a python code file. TODO1
@@ -16,12 +17,13 @@ doc = '''
 ######################################################
 '''
 
-# Add code-under-test path to sys.
-npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if npath not in sys.path:
-    sys.path.insert(0, npath)
+# Insert path to parent dir.
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pbot_pdb
 
+# Configure.
+pbot_pdb.MODE = 'UDP'
+pbot_pdb.PORT = 59140 # udp or 59120 for tcp
 
 
 #-----------------------------------------------------------------------------------

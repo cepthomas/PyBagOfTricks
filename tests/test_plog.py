@@ -3,11 +3,8 @@ import os
 import datetime
 import unittest
 
-
-# Add code-under-test path to sys.
-npath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if npath not in sys.path:
-    sys.path.insert(0, npath)
+# Insert path to parent dir.
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import plog
 
 
@@ -16,7 +13,7 @@ class TestPlog(unittest.TestCase):
 
     def setUp(self):
         self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'plog_test.log'))
-
+        
     def tearDown(self):
         pass
 
