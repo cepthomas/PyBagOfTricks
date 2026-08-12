@@ -24,7 +24,7 @@ class TestPlog(unittest.TestCase):
         try: os.remove(self.log_fn)
         except: pass
         plog.init('PLOG1', self.log_fn, max=100)
-        plog.setEnable(True)
+        plog.enable(True)
 
         plog.info(f'================= START PLOG1 =======================')
         for i in range(20):
@@ -47,7 +47,7 @@ class TestPlog(unittest.TestCase):
 
         # def test_overwrite(self):
         plog.init('PLOG2', self.log_fn, append=False)
-        plog.setEnable(True)
+        plog.enable(True)
 
         plog.info(f'================= START PLOG1 =======================')
         plog.info(f'Info message only')

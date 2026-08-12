@@ -14,7 +14,7 @@ if npath not in sys.path:
 import plog
 
 
-# Fancier Generic TCP Client
+# Generic TCP Client
 # - Automatically connects to the server. This means that you can edit/run your code
 #   without having to restart the client.
 # - Detects unresponsive server by requiring a response for each command sent.
@@ -44,7 +44,7 @@ class PbotPdbClient(object):
     def __init__(self):
         '''Construction.'''
         plog.init('TCPC', LOG_FN, readable=True)
-        plog.setEnable(True)
+        plog.enable(True)
 
         self.sock = None
         self.commif = None

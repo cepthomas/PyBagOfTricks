@@ -4,8 +4,8 @@ Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
 
 # PbotPdb 
 
-- Component for debugging python remotely over a tcp or udp connection.
-- Initially developed for debugging Sublime Text plugins but is actually generally useful standalone.
+- Component for debugging python remotely over a TCP or UDP connection.
+- Initially built to debug Sublime Text plugins but is actually generally useful standalone.
 - There's a fair amount hacked from [remote-db](https://github.com/ionelmc/python-remote-pdb).
 - Built for ST4 on Windows. Linux and OSX should be ok but are minimally tested.
 
@@ -52,10 +52,7 @@ sys.excepthook = excepthook
 ```
 
 # Plog
-Dumb simple logger for python. One per client module.
-
-TODO1 usage: copy or import?
-
+Dumb simple logger for python. One per client module, threadsafe.
 
 # Tracer
 Tool for tracing through code, especially function entry/exit.
