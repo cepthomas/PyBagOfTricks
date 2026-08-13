@@ -10,25 +10,32 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pbot_pdb
 import plog
 
+print('>>>', 'load test_ppdb')
 
 #-----------------------------------------------------------------------------------
 class TestPbotPdb(unittest.TestCase):
 
     def setUp(self):
-
+        print('>>>', 'setUp')
         self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'test_ppdb.log'))
         try: os.remove(self.log_fn)
         except: pass
         plog.init('PTST', self.log_fn, readable=True)
         plog.enable(True)
+        plog.info('=====================================')
 
     def tearDown(self):
-        pass
+        print('>>>', 'tearDown')
+        plog.stop()
 
     def test_udp(self):
+        print('>>>', 'test_udp() enter')
+        plog.info('test_udp() enter')
+
         ### Configure ppdb. ###
         pbot_pdb.MODE = 'UDP'
         pbot_pdb.PORT = 59140
+        pbot_pdb.LOG_FN = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'pbot_ppdb.log'))
 
         ### Run simulated remote client in a thread. ###
         def worker():
@@ -36,6 +43,8 @@ class TestPbotPdb(unittest.TestCase):
                 udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 udp_socket.bind((pbot_pdb.HOST, pbot_pdb.PORT))
                 udp_socket.settimeout(0.1)  # Seconds.
+        
+                print('>>>', 'worker start')
 
                 commands = ['w', 'l', 'n']
                 cind = 0
@@ -45,7 +54,8 @@ class TestPbotPdb(unittest.TestCase):
                     try:
                         if send_next: # ppdb is waiting for next client/user command.
                             smsg = commands[cind]
-                            plog.debug(f'Send message: {smsg}')
+                            plog.debug(f'worker send message: {smsg}')
+                            print('>>>', f'worker send message: {smsg}')
                             udp_socket.sendto(smsg.encode('utf-8'), (pbot_pdb.HOST, pbot_pdb.PORT))
                             cind += 1
                             send_next = False
@@ -53,7 +63,8 @@ class TestPbotPdb(unittest.TestCase):
                             # Listening for something ppdb sends.
                             rdata, _ = udp_socket.recvfrom(4096) # blocks
                             rmsg = rdata.decode('utf-8')
-                            plog.debug(f'Received message: {rmsg}')
+                            plog.debug(f'worker received message: {rmsg}')
+                            print('>>>', f'worker received message: {rmsg}')
 
                             if rmsg.startswith('(Pdb)'):
                                 # ppdb is waiting for next client/user command.
@@ -69,20 +80,27 @@ class TestPbotPdb(unittest.TestCase):
 
                     except Exception as e:
                         plog.error('Unexpected', e)
+                        print('>>>', 'worker Unexpected', e)
                         # self._debug(f'CommIf.readline() exception: {str(e)}')
                         raise # hard fail
+            print('>>>', 'worker end')
         threading.Thread(target=worker, daemon=True).start()
 
         ### Run the test code. ###
+        plog.info('Run the test code')
+        print('>>>', 'Run the test code')
         t = MyTestClass()
         t.go()
 
         ### Examine generated contents. ###
+        plog.info('Examine generated contents')
+        print('>>>', 'Examine generated contents')
         plog.stop()
         lines = []
         with open(self.log_fn) as f:
             lines = f.readlines()
         self.assertEqual(len(lines), 42)
+        # plog.info('exit')
 
     def test_tcp(self):
         # Configure ppdb.
@@ -129,60 +147,60 @@ class MyTestClass():
 #-----------------------------------------------------------------------------------
 
 
-#-----------------------------------------------------------------------------------
-class MyClassA(object):
-    '''A simple debug target.'''
+# #-----------------------------------------------------------------------------------
+# class MyClassA(object):
+#     '''A simple debug target.'''
 
-    def __init__(self, name, tags, arg):
-        self._name = name
-        self._tags = tags
-        self._arg = arg
+#     def __init__(self, name, tags, arg):
+#         self._name = name
+#         self._tags = tags
+#         self._arg = arg
 
-    def do_something(self, arg):
-        res = f'{self._arg}-user-{arg}'
-        return res
+#     def do_something(self, arg):
+#         res = f'{self._arg}-user-{arg}'
+#         return res
 
-    def do_boom(self):
-        # Cause unhandled exception.
-        return 1 / 0
+#     def do_boom(self):
+#         # Cause unhandled exception.
+#         return 1 / 0
 
-#----------------------------------------------------------
-def function_1(a1: int, a2: float):
-    '''A simple function.'''
-    cl1 = MyClassA('number 1', [45, 78, 23], a1)
-    cl2 = MyClassA('number 2', [100, 101, 102], a2)
-    ret = f'answer is cl1:{cl1.do_something(a1)}...cl2:{cl2.do_something(a2)}'
+# #----------------------------------------------------------
+# def function_1(a1: int, a2: float):
+#     '''A simple function.'''
+#     cl1 = MyClassA('number 1', [45, 78, 23], a1)
+#     cl2 = MyClassA('number 2', [100, 101, 102], a2)
+#     ret = f'answer is cl1:{cl1.do_something(a1)}...cl2:{cl2.do_something(a2)}'
 
-    # Play with exception handling.
-    # ret = f'{cl1.do_boom()}'
+#     # Play with exception handling.
+#     # ret = f'{cl1.do_boom()}'
 
-    return ret
+#     return ret
 
-#----------------------------------------------------------
-def function_2(a_list, a_dict):
-    '''A simple function.'''
-    return len(a_list) + len(a_dict)
+# #----------------------------------------------------------
+# def function_2(a_list, a_dict):
+#     '''A simple function.'''
+#     return len(a_list) + len(a_dict)
 
-#----------------------------------------------------------
-def function_boom():
-    '''A function that causes an unhandled exception.'''
-    return 1 / 0
+# #----------------------------------------------------------
+# def function_boom():
+#     '''A function that causes an unhandled exception.'''
+#     return 1 / 0
 
-#----------------------------------------------------------
-def do_it(alpha, number):
-    '''Main code.'''
+# #----------------------------------------------------------
+# def do_it(alpha, number):
+#     '''Main code.'''
 
-    # Benign reload in case of being edited.
-    # importlib.reload(pbot_pdb)
+#     # Benign reload in case of being edited.
+#     # importlib.reload(pbot_pdb)
 
-    # Set a breakpoint here then step through and examine the code.
-    pbot_pdb.breakpoint()
+#     # Set a breakpoint here then step through and examine the code.
+#     pbot_pdb.breakpoint()
 
-    ret = function_1(number, len(alpha))
+#     ret = function_1(number, len(alpha))
 
-    # Unhandled exception actually goes to sys.__excepthook__.
-    function_boom()
+#     # Unhandled exception actually goes to sys.__excepthook__.
+#     function_boom()
 
-    ret = function_2([33, 'thanks', 3.56], {'aaa': 111, 'bbb': 222, 'ccc': 333})
+#     ret = function_2([33, 'thanks', 3.56], {'aaa': 111, 'bbb': 222, 'ccc': 333})
 
-    return ret
+#     return ret

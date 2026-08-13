@@ -21,7 +21,7 @@ HOST = '127.0.0.1'
 LOG_FN = os.path.join(os.path.dirname(__file__), 'log', 'pbot_pdb.log')
 
 # Add sequence number to UDP messages. Simple loss detection.
-SEQ_NUM = True
+SEQ_NUM = False
 
 # Show non-ascii content.
 READABLE = True
@@ -52,6 +52,7 @@ class PbotPdb(pdb.Pdb):
         
         try:
             # Initialize logging. Maybe roll over log now.
+            print('---', MODE, LOG_FN)
             if LOG_FN and os.path.exists(LOG_FN) and os.path.getsize(LOG_FN) > 50000:
                 bup = LOG_FN.replace('.log', '_old.log')
                 shutil.copyfile(LOG_FN, bup)
@@ -186,6 +187,7 @@ class UdpIf(object):
                     data, _ = sock.recvfrom(4096) # blocks
                     msg = data.decode(self._encoding)
                     debug(f'Received message: {msg}')
+                    print('---', f'Received message: {msg}')
 
                     if SEQ_NUM:
                         pass
@@ -196,6 +198,7 @@ class UdpIf(object):
 
                 except KeyboardInterrupt as e:
                     debug(f'KeyboardInterrupt')
+                    print('---', f'KeyboardInterrupt')
                     self._pdbBuff = ''
                     exit = True # orderly shutdown
 
@@ -236,11 +239,13 @@ class UdpIf(object):
                             msg = f'[{self._seq_num}]{msg}'
                         udp_socket.sendto(msg.encode(self._encoding), (HOST, PORT))
                         debug(f'write(): {msg}')
+                        print('---', f'write(): {msg}')
 
                     # Write prompt.
                     msg = f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m\n' if USE_COLOR else '(Pdb)\n'
                     udp_socket.sendto(msg.encode(self._encoding), (HOST, PORT))
                     debug(f'write(): {msg}')
+                    print('---', f'write(): {msg}')
 
                     # Reset buffer.
                     self._pdbBuff = ''
