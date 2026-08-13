@@ -2,7 +2,6 @@ import sys
 import os
 import datetime
 import unittest
-
 # Insert path to parent dir.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import tracer as tr
@@ -115,7 +114,7 @@ class TestTracer(unittest.TestCase):
         pass
 
     def test_success(self):
-        trace_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'tracer_test.log'))
+        trace_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'test_tracer.log'))
         tr.start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')'))
 
         T(f'Start {do_a_suite.__name__}:{do_a_suite.__doc__} {datetime.datetime.now()}')

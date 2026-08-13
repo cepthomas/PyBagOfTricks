@@ -3,7 +3,7 @@ import os
 import datetime
 import socketserver
 
-# Simple echoing tcp server.
+# Simple echoing tcp server for test purposes.
 
 
 # Configure. Edit for specific test scenarios.

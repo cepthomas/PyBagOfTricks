@@ -2,7 +2,6 @@ import sys
 import os
 import datetime
 import unittest
-
 # Insert path to parent dir.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import plog
@@ -12,7 +11,7 @@ import plog
 class TestPlog(unittest.TestCase):
 
     def setUp(self):
-        self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'plog_test.log'))
+        self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'test_plog.log'))
         
     def tearDown(self):
         pass

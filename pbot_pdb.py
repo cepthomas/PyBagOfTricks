@@ -8,10 +8,10 @@ import shutil
 
 
 # ---------------------- Configuration ----------------------------------
-# TODO Make some/all configurable by client cmd line?
+# TODO1 Make some/all configurable by client cmd line?
 
-### Required.
-MODE = 'NONE' #'UDP' OR 'TCP'
+### Required??
+MODE = 'UDP' #'UDP' OR 'TCP'
 PORT = -1
 
 ### Optional.

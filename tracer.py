@@ -51,10 +51,8 @@ def start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')')):
 
     with _lock:
         if clean_file:
-            try:
-                os.remove(trace_fn)
-            except:
-                pass    
+            try: os.remove(trace_fn)
+            except: pass    
 
         # Open file now and keep it open. Open/close on every write is too expensive.
         # Note that each instance requires its own file.

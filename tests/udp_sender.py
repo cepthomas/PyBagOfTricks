@@ -4,25 +4,22 @@ import os
 import importlib
 import random
 import time
-
 # Insert path to parent dir.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import plog
 
 
-# Where to log. Usually same as the server log. None indicates no logging.
+### config ###
 LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'udp_sender.log')
-
 HOST = '127.0.0.1' # 'localhost'
 PORT = 59140
-# NA Delimiter for message lines. LF=10  CR=13  NUL=0
 TIMEOUT = 5
 
-seq_num = 0
+### vars ###
+_seq_num = 0
+_now = False
 
-NOW = False
-
-lines = [
+_lines = [
     "===first-line-ross===",
     "We can always carry this a step further. There's really no end to this.",
     "Here's some embedded ansi color codes! [38;2;204;39;187mYou have freedom here.[0mThe only guide is your heart.",
@@ -44,9 +41,9 @@ lines = [
 
 # Send function.
 def send(msg):
-    global seq_num
-    seq_num = seq_num + 1
-    msg = f'[{seq_num}]{msg}'
+    global _seq_num
+    _seq_num = _seq_num + 1
+    msg = f'[{_seq_num}]{msg}'
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
@@ -57,13 +54,13 @@ def send(msg):
         plog.error("An error occurred", e)
 
 
-if NOW:
+if _now:
     # outer loop
     for i in range(5):
         # inner loop
         for j in range(5):
-            r =  random.randrange(0, len(lines))
-            send(lines[r].rstrip())
+            r =  random.randrange(0, len(_lines))
+            send(_lines[r].rstrip())
             time.sleep(0.05)
         time.sleep(0.2)
 else: # or wait until we are told to go.
@@ -86,8 +83,8 @@ else: # or wait until we are told to go.
                     for i in range(5):
                         # inner loop
                         for j in range(5):
-                            r =  random.randrange(0, len(lines))
-                            send(lines[r].rstrip())
+                            r =  random.randrange(0, len(_lines))
+                            send(_lines[r].rstrip())
                             time.sleep(0.05)
                         time.sleep(0.2)
                     exit = True
