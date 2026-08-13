@@ -10,7 +10,16 @@ import traceback
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import plog
 
-# Simple echoing udp endpoint for test purposes.
+
+'''
+Generic TCP Client
+- Automatically connects to the server. This means that you can edit/run your code
+  without having to restart the client.
+- Detects unresponsive server by requiring a response for each command sent.
+- Provides some extra system status information, indicated by `!`.
+- Optionally edit the configuration block in this file.
+- Use ctrl-C to exit the client. The server will also stop/unblock.
+'''
 
 
 # Where to log. None indicates no logging.
@@ -30,15 +39,6 @@ MSG_IND = '!'
 
 #------------------------------------------------------------------------------
 class GenericTcpClient(object):
-    '''
-    Generic TCP Client
-    - Automatically connects to the server. This means that you can edit/run your code
-      without having to restart the client.
-    - Detects unresponsive server by requiring a response for each command sent.
-    - Provides some extra system status information, indicated by `!`.
-    - Optionally edit the configuration block in this file.
-    - Use ctrl-C to exit the client. The server will also stop/unblock.
-    '''
 
     def __init__(self):
         '''Construction.'''
