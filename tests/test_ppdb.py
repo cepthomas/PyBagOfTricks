@@ -12,9 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pbot_pdb
 import plog
 
-
-
-# based on tcp_client.py
+# __unittest = True  # Tells unittest to completely ignore frames in this module
 
 
 #-----------------------------------------------------------------------------------
@@ -24,9 +22,8 @@ class TestPbotPdb(unittest.TestCase):
         self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'test_ppdb.log'))
         try: os.remove(self.log_fn)
         except: pass
-        plog.init('PTST', self.log_fn, readable=True)
+        plog.init('PTST', self.log_fn, readable=False) #True)
         plog.enable(True)
-        plog.info('=====================================')
 
     def tearDown(self):
         plog.stop()
@@ -34,7 +31,6 @@ class TestPbotPdb(unittest.TestCase):
 
     #------------------------------------------------------------------
     def test_ppdb_tcp(self):
-        plog.info('test_ppdb_tcp() enter')
 
         ### Configure ppdb. ###
         pbot_pdb.PORT = 59140
@@ -43,33 +39,32 @@ class TestPbotPdb(unittest.TestCase):
         try: os.remove(pbot_pdb.LOG_FN)
         except: pass
 
+        commif = None
         capture = []
 
-        commif = None
-
-        ### Run simulated remote client in a thread. ###
+        ### Run simulated remote client in a thread ###
         def worker():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
-
-                ### Try connecting ###
-                tcp_socket.settimeout(1) # enough time to start ppdb server
-                try:
-                    tcp_socket.connect((pbot_pdb.HOST, pbot_pdb.PORT))
-
-                    # Didn't fault so must be success.
-                    commif = tcp_socket.makefile('rw')
-                    plog.info('Connected to server')
-
-                except Exception as e:
-                    plog.error('Failed to connect', e)
-                    return
 
                 ### Send some commands ###
                 commands = ['w', 'l', 'n']
                 while len(commands) > 0:
                     try:
+                        ### Try connecting ###
+                        tcp_socket.settimeout(1) # enough time to start ppdb server
+                        try:
+                            tcp_socket.connect((pbot_pdb.HOST, pbot_pdb.PORT))
+                            # Didn't fault so must be success.
+                            commif = tcp_socket.makefile('rw')
+                            # plog.info('Connected to server')
+
+                        except Exception as e:
+                            # plog.error('Failed to connect', e)
+                            return
+
+                        ### Next command ###
                         smsg = commands.pop(0)
-                        plog.debug(f'worker send message [[[{smsg}]]')
+                        plog.debug(f'Send [[[{smsg}]]]')
                         commif.write(smsg + '\n')
                         commif.flush()
                         capture.append(f'S {smsg}')
@@ -83,41 +78,47 @@ class TestPbotPdb(unittest.TestCase):
                             try:
                                 s = commif.read(100)
                                 # Got something.
-                                plog.debug(f'worker received [[[{s}]]]')
+                                # plog.debug(f'worker received [[[{s}]]]')
                                 sresp += s
 
                             except TimeoutError:
                                 # Nothing more to read.
                                 rcving = False
 
-                            # Process any capture.
-                            for s in sresp.splitlines():
-                                capture.append(f'R {s}')
+                        # Process any capture.
+                        plog.debug(f'Receive [[[{sresp}]]]')
+                        for s in sresp.splitlines():
+                            capture.append(f'R {s}')
 
                     except Exception as e:
                         plog.error('Unexpected', e)
                         capture.append(f'! {e}')
-
                         # self._debug(f'CommIf.readline() exception: {str(e)}')
                         raise # hard fail
 
-
         threading.Thread(target=worker, daemon=True).start()
 
-        ### Sim set up - now we can run the test code. ###
+        ### Now we can run the test code. ###
         plog.info('Run the test code')
+        print('--- 10')
         t = MyTestClass()
+        print('--- 20')
         t.go()
+        print('--- 30')
+
+# Debugging Crash (BdbQuit): If you hit a self.quitting traceback ending in bdb.BdbQuit, it means
+# a pdb session (or a tool wrapping it like pytest --pdb) was active and received a quit command.
+# Ensure you do not leave interactive debugging hooks like breakpoint() or pdb.set_trace() running
+# inside automated test suites.
 
         ### Examine generated contents ###
         plog.info('Examine generated contents')
 
+        self.assertEqual(len(capture), 42)
         # lines = []
         # with open(self.log_fn) as f:
         #     lines = f.readlines()
         # self.assertEqual(len(lines), 42)
-
-        self.assertEqual(len(capture), 42)
 
         ### Stop ###
         plog.info('exit')
@@ -133,7 +134,9 @@ class MyTestClass():
 
     def go(self):
         # Set a breakpoint here then step through and examine the code.
+        print('--- 100')
         pbot_pdb.breakpoint()
+        print('--- 200')
 
         ret = self.klass_function_1(911, 'abcd')
 

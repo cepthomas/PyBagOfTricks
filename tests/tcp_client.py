@@ -142,7 +142,7 @@ class GenericTcpClient(object):
                 if self.commif is not None:
                     try:
                         # Don't block.
-                        self.sock.settimeout(0)  # pyright: ignore
+                        self.sock.settimeout(0)
 
                         done = False
                         while not done:

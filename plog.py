@@ -45,6 +45,8 @@ _enabled = False
 # Simple file size mgmt.
 _line_cnt = 0
 
+# TODO1 user-supplied list like pbot_pdb.py.'''
+XLAT = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
 
 #-------------------------------------------------------------------------------
 #---------------------------- Lifecycle ----------------------------------------
@@ -53,7 +55,7 @@ _line_cnt = 0
 #-------------------------------------------------------------------------------
 def init(name, fn, append=True, readable=False, max=1000):
     ''' Start the file '''
-    global _name, _log_fn, _mode, _max, _f, _enabled
+    global _name, _log_fn, _readable, _mode, _max, _f, _enabled
 
     stop() # just in case
 
@@ -187,8 +189,9 @@ def _write_log(slevel, message, tb=None):
 
 #-------------------------------------------------------------------------------
 def _make_readable(s):
-    '''So we can see things like LF, CR, ESC in log. TODO user-supplied list.'''
-    s = s.replace('\n', '_N').replace('\r', '_R').replace('\u001b', '_E')
+    '''So we can see things like LF, CR, ESC in log.'''
+    for k, v in XLAT.items():
+        s = s.replace(k, v)
     return s
 
 #-------------------------------------------------------------------------------

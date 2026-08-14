@@ -41,7 +41,6 @@ class CommIf(object):
     Read/write interface to socket. Makes socket look like a file object.
     Also handles encoding, color, line endings etc.
     Catches exceptions for the purpose of logging only. They are re-raised.
-    Line delimiter is fixed at \n.
     '''
 
     def __init__(self, conn):
@@ -60,7 +59,7 @@ class CommIf(object):
         return self.stream.__iter__()
 
     def _send(self, msg):
-        msg += '\n' #MDEL
+        # msg += '\n'
         self.conn.sendall(msg.encode())
 
     # --------------- Required interface ---------------
@@ -76,8 +75,8 @@ class CommIf(object):
         try:
             msg = self.stream.readline() # blocks, throws if timeout
             self.last_cmd = msg
-            debug(f'Received command: {msg}')
-            return self.last_cmd
+            # debug(f'Received command: {msg}')
+            return msg
 
         except (ConnectionError, socket.timeout) as e:
             debug(f'Disconnected: {type(e)}')
@@ -90,12 +89,13 @@ class CommIf(object):
 
     def write(self, line):
         '''Core pdb calls this to write to cli/client. This adjusts and sends to socket.'''
+        # debug(f'+++ write [{line}]')
         try:
             # pdb writes lines piecemeal but we want full proper lines.
             # Easiest is to accumulate in a buffer until we see the prompt then slice and write.
             if '(Pdb)' in line:
                 for s in self.buff.splitlines():
-                    # sc.debug(f'DBG Send response: {s}')
+                    # debug(f'DBG Send response: {s}')
                     color = None
 
                     if USE_COLOR:
@@ -106,6 +106,7 @@ class CommIf(object):
                         elif 'Error:' in s: color = ERROR_COLOR
                         elif s.startswith('> '): color = STACK_LOCATION_COLOR
 
+                    # self._send(f'{s}' if color is None else f'\033[{color}m{s}\033[0m')
                     self._send(f'{s}\n' if color is None else f'\033[{color}m{s}\033[0m\n')
 
                 # Write prompt.
@@ -159,10 +160,8 @@ class PbotPdb(pdb.Pdb):
             # Connected.
             info(f'Server accepted connection from {repr(address)}.')
             self.commif = CommIf(conn)
-            super().__init__(completekey='tab', stdin=self.commif, stdout=self.commif)  # pyright: ignore
-
             # Init base.
-            super().__init__(stdin=self.commif, stdout=self.commif, skip=None)  # pyright: ignore
+            super().__init__(stdin=self.commif, stdout=self.commif, skip=['unittest.*'])  # pyright: ignore
             # TODO 3.14+ colorize=True  mode=???   lse - enable colorized output in the debugger, if color is supported.
 
         except (ConnectionError, socket.timeout) as e:
@@ -211,8 +210,7 @@ class PbotPdb(pdb.Pdb):
     do_q = do_quit # alias
 
 
-
-    # ---------------------- Infrastructure ----------------------------
+# ---------------------- Infrastructure ----------------------------
 def error(message, tb=None): _write_log('ERR', message, tb) # TODO Show the user some info?
 def warn(message): _write_log('WRN', message)
 def info(message): _write_log('INF', message)
