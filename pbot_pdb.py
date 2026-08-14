@@ -11,29 +11,16 @@ import shutil
 # TODO1 Make some/all configurable by client cmd line?
 
 ### Required
-# MODE = 'UDP' #'UDP' OR 'TCP'
 PORT = -1
 
 ### Optional.
 HOST = '127.0.0.1'
 
-# Where to log. None indicates no logging.
-LOG_FN = os.path.join(os.path.dirname(__file__), 'log', 'pbot_pdb.log')
+# Where to log or None.
+LOG_FN = None
 
-# Add sequence number to UDP messages. Simple loss detection.
-# SEQ_NUM = False
-
-# Timeout. Means different things depending on mode.
-_timeout = 5
-
-# Indicate internal message (not pdb)
-MSG_IND = '!'
-
-# Delimiter for socket message lines.
-# MDEL = '\n'
-
-# Show non-ascii content.
-READABLE = True
+# Translate non-ascii content.
+XLAT = {}
 
 # Ansi color (https://en.wikipedia.org/wiki/ANSI_escape_code)
 USE_COLOR = False
@@ -54,10 +41,8 @@ class CommIf(object):
     Read/write interface to socket. Makes socket look like a file object.
     Also handles encoding, color, line endings etc.
     Catches exceptions for the purpose of logging only. They are re-raised.
+    Line delimiter is fixed at \n.
     '''
-
-# TCP: The line terminator is always b'\n' for binary files
-# for text files, the newline argument to open() can be used to select the line terminator(s) recognized.
 
     def __init__(self, conn):
         self.conn = conn
@@ -161,10 +146,8 @@ class PbotPdb(pdb.Pdb):
                 with open(LOG_FN, 'w'):
                     pass
 
-# -----------------------orig-------------------------------------
-
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.settimeout(_timeout)  # Seconds.
+            self.sock.settimeout(5)  # Seconds.
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
             self.sock.bind((HOST, PORT))
             info(f'Server started on {HOST}:{PORT} - waiting for connection.')
@@ -177,33 +160,6 @@ class PbotPdb(pdb.Pdb):
             info(f'Server accepted connection from {repr(address)}.')
             self.commif = CommIf(conn)
             super().__init__(completekey='tab', stdin=self.commif, stdout=self.commif)  # pyright: ignore
-            # PbotPdb.active_instance = self
-# ------------------------------------------------------------
-
-
-
-
-            # #     self.init_tcp()
-            # '''Create TCP. TODO needs clean and test.'''
-            # try:
-            #     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            #     if _timeout > 0:
-            #         self.sock.settimeout(_timeout)  # Seconds.
-            #     self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-            #     self.sock.bind((MODE, PORT))
-            #     info(f'Server started on {HOST}:{PORT} - waiting for connection.')
-            #     # Blocks until client connect or timeout.
-            #     self.sock.listen(1)
-            #     conn, address = self.sock.accept()
-            #     # Connected.
-            #     info(f'Server accepted connection from {repr(address)}.')
-            #     self.commif = CommIf(conn)
-            # except (ConnectionError, socket.timeout) as e:
-            #     info(f'Server connection timed out, try again: {str(e)}')
-            #     # not?! self.do_quit()
-            # except Exception as e:
-            #     # Other error handler.
-            #     error('init fail', e)
 
             # Init base.
             super().__init__(stdin=self.commif, stdout=self.commif, skip=None)  # pyright: ignore
@@ -216,43 +172,6 @@ class PbotPdb(pdb.Pdb):
         except Exception as e:
             # Other error handler. ?? ConnectionError, socket.timeout
             error('init failed', e)
-
-    # def init_udp(self):
-    #     '''Create UDP.'''
-    #     self.commif = UdpIf()
-
-    # def init_tcp(self):
-    #     '''Create TCP. TODO needs clean and test.'''
-    #     try:
-    #         self.sock = None
-    #         self.commif = None
-    #         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #         if _timeout > 0:
-    #             self.sock.settimeout(_timeout)  # Seconds.
-    #         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-    #         self.sock.bind((MODE, PORT))
-    #         info(f'Server started on {HOST}:{PORT} - waiting for connection.')
-    #         # Blocks until client connect or timeout.
-    #         self.sock.listen(1)
-    #         conn, address = self.sock.accept()
-    #         # Connected.
-    #         info(f'Server accepted connection from {repr(address)}.')
-    #         self.commif = CommIf(conn)
-    #     except (ConnectionError, socket.timeout) as e:
-    #         info(f'Server connection timed out, try again: {str(e)}')
-    #         # not?! self.do_quit()
-    #     except Exception as e:
-    #         # Other error handler.
-    #         error('init fail', e)
-
-
-
-
-
-
-
-
-
 
 
     # --------------- Go! ---------------------
@@ -292,132 +211,8 @@ class PbotPdb(pdb.Pdb):
     do_q = do_quit # alias
 
 
-# ---------------------- UDP flavor -------------------------------------
-# class UdpIf(object):
-#     '''
-#     Read/write interface to socket. Makes socket look like a file object.
-#     Also handles encoding, color, line endings etc.
-#     '''
 
-#     def __init__(self):
-#         '''Construction.'''
-#         self._last_cmd = None
-#         # Collected parts of pdb write.
-#         self._pdbBuff = ''
-#         # Simple packet loss detection.
-#         self._seq_num = 0;
-#         self._encoding = 'utf-8'
-
-
-#     def close(self):
-#         pass
-
-#     # --------------- Required interface ---------------
-#     # per https://docs.python.org/3/library/io.html#io.TextIOBase
-
-#     @property
-#     def encoding(self):
-#         return self._encoding
-
-#     def readline(self, size=1):
-#         '''Core pdb calls this to read from cli/client. Returns the valid user command.'''
-#         del size
-#         msg = None
-#         exit = False
-
-#         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-#             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#             sock.bind((HOST, PORT))
-#             if _timeout > 0:
-#                 sock.settimeout(_timeout)  # Seconds.
-#             debug(f'UDP on {HOST}:{PORT} [{_timeout}]')
-
-#             while msg is None and not exit:
-#                 try:
-#                     data, _ = sock.recvfrom(4096) # blocks
-#                     msg = data.decode(self._encoding)
-#                     debug(f'Received message: {msg}')
-#                     print('---', f'Received message: {msg}')
-
-#                     if SEQ_NUM:
-#                         pass
-#                         # TODO strip seq number from front '[99]' and check if it's expected
-
-#                     self._last_cmd = msg
-#                     return msg
-
-#                 except KeyboardInterrupt as e:
-#                     debug(f'KeyboardInterrupt')
-#                     print('---', f'KeyboardInterrupt')
-#                     self._pdbBuff = ''
-#                     exit = True # orderly shutdown
-
-#                 except (ConnectionError, socket.timeout) as e:
-#                     # debug(f'ConnectionError timeout')
-#                     pass
-
-#                 except Exception as e:
-#                     debug(f'UdpIf.readline() other exception: {str(e)}')
-#                     self._pdbBuff = ''
-#                     raise # hard fail
-
-#                 # finally:
-#                 #     sock.close()
-
-#     def write(self, line):
-#         '''Core pdb calls this to write to cli/client. This adjusts and sends to socket.'''
-#         try:
-#             # pdb writes lines piecemeal but we want full proper lines. Presumes core is handling NLs.
-#             # Easiest is to accumulate in a buffer until we see the prompt then slice and write. TODO some common with TCP.
-#             if '(Pdb)' in line:
-#                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-#                     for s in self._pdbBuff.splitlines():
-#                         # sc.debug(f'DBG Send response: {s}')
-#                         color = None
-
-#                         if USE_COLOR:
-#                             if s.startswith('-> '): color = CURRENT_LINE_COLOR
-#                             elif ' ->' in s: color = CURRENT_LINE_COLOR
-#                             elif s.startswith('>> '): color = EXCEPTION_LINE_COLOR
-#                             elif '***' in s: color = ERROR_COLOR
-#                             elif 'Error:' in s: color = ERROR_COLOR
-#                             elif s.startswith('> '): color = STACK_LOCATION_COLOR
-
-#                         msg = f'{s}' if color is None else f'\u001b[{color}m{s}\u001b[0m'
-#                         if SEQ_NUM:
-#                             self.seq_num = self._seq_num + 1
-#                             msg = f'[{self._seq_num}]{msg}'
-#                         udp_socket.sendto(msg.encode(self._encoding), (HOST, PORT))
-#                         debug(f'write(): {msg}')
-#                         print('---', f'write(): {msg}')
-
-#                     # Write prompt.
-#                     msg = f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m\n' if USE_COLOR else '(Pdb)\n'
-#                     udp_socket.sendto(msg.encode(self._encoding), (HOST, PORT))
-#                     debug(f'write(): {msg}')
-#                     print('---', f'write(): {msg}')
-
-#                     # Reset buffer.
-#                     self._pdbBuff = ''
-#             else:
-#                 # Just collect.
-#                 self._pdbBuff += line
-
-#         except Exception as e:
-#             # ?? (ConnectionError, socket.timeout)
-#             debug(f'UdpIf.write() other exception: {str(e)}')
-#             self._pdbBuff = ''
-#             raise
-
-#     # read(size=-1, /) not needed?
-#     #     Read and return at most size characters as str. If size is negative or None, reads until EOF.
-
-#     def flush(self):
-#         pass
-
-
-
-# ---------------------- Common -------------------------------------
+    # ---------------------- Infrastructure ----------------------------
 def error(message, tb=None): _write_log('ERR', message, tb) # TODO Show the user some info?
 def warn(message): _write_log('WRN', message)
 def info(message): _write_log('INF', message)
@@ -427,9 +222,8 @@ def _write_log(level, message, tb=None):
     '''Format a standard message with caller info and log it.'''
     if not LOG_FN: return
 
-    if READABLE:
-        '''So we can see things like LF, CR, ESC in log. TODO1 user-supplied list.'''
-        message = message.replace('\n', '_N').replace('\r', '_R').replace('\u001b', '_E')
+    for k, v in XLAT.items():
+        message = message.replace(k, v)
 
     # Get caller info.
     frame = sys._getframe(2)

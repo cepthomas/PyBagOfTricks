@@ -103,7 +103,7 @@ def error(message, exc=None):
         tb = None if not exc else exc.__traceback__
         _write_log('ERR', message, tb)
 
-        # Show the user some context info.
+        # Some context info.
         info = [message]
         for s in traceback.format_tb(tb):
             if len(s) > 0:
