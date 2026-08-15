@@ -135,6 +135,8 @@ class PbotPdb(pdb.Pdb):
     # --------------- Construction ---------------
     def __init__(self):
         '''Construction.'''
+        self.sock = None
+        self.commif = None
         
         try:
             # Initialize logging. Maybe roll over log now.

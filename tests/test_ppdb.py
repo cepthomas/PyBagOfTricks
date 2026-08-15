@@ -15,30 +15,6 @@ import plog
 # __unittest = True  # Tells unittest to completely ignore frames in this module
 
 
-# TODO1 Because of the nature of remote debugging, issuing a `q(uit)` command instead of `c(ont)` causes
-#   an unhandled [BdbQuit exception](https://stackoverflow.com/a/34936583).
-#   Similarly, unhandled `ConnectionError` can occur. They are harmless but if it annoys you,
-#   add (or edit) this code somewhere in your code being debugged:
-
-# import bdb
-# print('>>> myhook 1')
-# plog.info('>>> myhook 1')
-# def myhook(type, value, tb):
-#     print('>>> myhook 2', type, value, tb)
-#     plog.info('>>> myhook 2')
-#     if issubclass(type, bdb.BdbQuit) or issubclass(type, ConnectionError):
-#         return  # ignore
-
-#     # Otherwise call original hook.
-#     sys.__excepthook__(type, value, tb)
-
-# # Connect the last chance hook.
-# sys.excepthook = myhook
-# threading.excepthook = myhook
-# print('>>> myhook 3', myhook, sys.excepthook)
-
-# raise ValueError("TestPbotPdb error!")
-
 #-----------------------------------------------------------------------------------
 class TestPbotPdb(unittest.TestCase):
 

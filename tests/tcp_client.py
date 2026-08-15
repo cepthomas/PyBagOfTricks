@@ -21,6 +21,7 @@ Generic TCP Client
 - Use ctrl-C to exit the client. The server will also stop/unblock.
 '''
 
+# TODO1 pass config in from file/cli
 
 # Where to log. None indicates no logging.
 LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
