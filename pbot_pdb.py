@@ -89,7 +89,7 @@ class CommIf(object):
 
     def write(self, line):
         '''Core pdb calls this to write to cli/client. This adjusts and sends to socket.'''
-        # debug(f'+++ write [{line}]')
+        # debug(f'write [{line}]')
         try:
             # pdb writes lines piecemeal but we want full proper lines.
             # Easiest is to accumulate in a buffer until we see the prompt then slice and write.
@@ -106,7 +106,6 @@ class CommIf(object):
                         elif 'Error:' in s: color = ERROR_COLOR
                         elif s.startswith('> '): color = STACK_LOCATION_COLOR
 
-                    # self._send(f'{s}' if color is None else f'\033[{color}m{s}\033[0m')
                     self._send(f'{s}\n' if color is None else f'\033[{color}m{s}\033[0m\n')
 
                 # Write prompt.
@@ -139,7 +138,6 @@ class PbotPdb(pdb.Pdb):
         
         try:
             # Initialize logging. Maybe roll over log now.
-            # print('---', MODE, LOG_FN)
             if LOG_FN and os.path.exists(LOG_FN) and os.path.getsize(LOG_FN) > 50000:
                 bup = LOG_FN.replace('.log', '_old.log')
                 shutil.copyfile(LOG_FN, bup)
@@ -160,8 +158,9 @@ class PbotPdb(pdb.Pdb):
             # Connected.
             info(f'Server accepted connection from {repr(address)}.')
             self.commif = CommIf(conn)
+
             # Init base.
-            super().__init__(stdin=self.commif, stdout=self.commif, skip=['unittest.*'])  # pyright: ignore
+            super().__init__(stdin=self.commif, stdout=self.commif, skip=['unittest.*', 'pbot_pdb.py'])  # pyright: ignore
             # TODO 3.14+ colorize=True  mode=???   lse - enable colorized output in the debugger, if color is supported.
 
         except (ConnectionError, socket.timeout) as e:
@@ -179,7 +178,7 @@ class PbotPdb(pdb.Pdb):
         debug('breakpoint() entry')
         if self.commif is not None:
             try:
-                # This blocks until user says done.
+                # This blocks until user says done. Note this messes with the stack so things get weird after.
                 super().set_trace(frame)
 
             except Exception as e:
@@ -211,14 +210,16 @@ class PbotPdb(pdb.Pdb):
 
 
 # ---------------------- Infrastructure ----------------------------
-def error(message, tb=None): _write_log('ERR', message, tb) # TODO Show the user some info?
+def error(message, e=None): _write_log('ERR', message, e) # TODO Show the user some info?
 def warn(message): _write_log('WRN', message)
 def info(message): _write_log('INF', message)
 def debug(message): _write_log('DBG', message)
 
-def _write_log(level, message, tb=None):
+def _write_log(level, message, e=None):
     '''Format a standard message with caller info and log it.'''
     if not LOG_FN: return
+
+    tb = None if not e else e.__traceback__
 
     for k, v in XLAT.items():
         message = message.replace(k, v)

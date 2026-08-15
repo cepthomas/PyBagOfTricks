@@ -45,7 +45,7 @@ import bdb
 def excepthook(type, value, tb):
     if issubclass(type, bdb.BdbQuit) or issubclass(type, ConnectionError):
         return  # ignore
-    sys.__excepthook__(type, value, traceback)
+    sys.__excepthook__(type, value, tb)
 
 # Connect the last chance hook.
 sys.excepthook = excepthook

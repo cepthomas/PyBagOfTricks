@@ -99,10 +99,10 @@ def enable(enb):
     _enabled = enb
 
 #-------------------------------------------------------------------------------
-def error(message, exc=None):
+def error(message, e=None):
     '''Client logger function.'''
     if _enabled:
-        tb = None if not exc else exc.__traceback__
+        tb = None if not e else e.__traceback__
         _write_log('ERR', message, tb)
 
         # Some context info.

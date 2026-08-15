@@ -15,6 +15,30 @@ import plog
 # __unittest = True  # Tells unittest to completely ignore frames in this module
 
 
+# TODO1 Because of the nature of remote debugging, issuing a `q(uit)` command instead of `c(ont)` causes
+#   an unhandled [BdbQuit exception](https://stackoverflow.com/a/34936583).
+#   Similarly, unhandled `ConnectionError` can occur. They are harmless but if it annoys you,
+#   add (or edit) this code somewhere in your code being debugged:
+
+# import bdb
+# print('>>> myhook 1')
+# plog.info('>>> myhook 1')
+# def myhook(type, value, tb):
+#     print('>>> myhook 2', type, value, tb)
+#     plog.info('>>> myhook 2')
+#     if issubclass(type, bdb.BdbQuit) or issubclass(type, ConnectionError):
+#         return  # ignore
+
+#     # Otherwise call original hook.
+#     sys.__excepthook__(type, value, tb)
+
+# # Connect the last chance hook.
+# sys.excepthook = myhook
+# threading.excepthook = myhook
+# print('>>> myhook 3', myhook, sys.excepthook)
+
+# raise ValueError("TestPbotPdb error!")
+
 #-----------------------------------------------------------------------------------
 class TestPbotPdb(unittest.TestCase):
 
@@ -33,7 +57,7 @@ class TestPbotPdb(unittest.TestCase):
     def test_ppdb_tcp(self):
 
         ### Configure ppdb. ###
-        pbot_pdb.PORT = 59140
+        pbot_pdb.PORT = 59120
         pbot_pdb.XLAT = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
         pbot_pdb.LOG_FN = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'pbot_ppdb.log'))
         try: os.remove(pbot_pdb.LOG_FN)
@@ -96,24 +120,19 @@ class TestPbotPdb(unittest.TestCase):
                         # self._debug(f'CommIf.readline() exception: {str(e)}')
                         raise # hard fail
 
+                plog.debug(f'worker loop exit')
+
         threading.Thread(target=worker, daemon=True).start()
 
         ### Now we can run the test code. ###
         plog.info('Run the test code')
-        print('--- 10')
         t = MyTestClass()
-        print('--- 20')
         t.go()
-        print('--- 30')
-
-# Debugging Crash (BdbQuit): If you hit a self.quitting traceback ending in bdb.BdbQuit, it means
-# a pdb session (or a tool wrapping it like pytest --pdb) was active and received a quit command.
-# Ensure you do not leave interactive debugging hooks like breakpoint() or pdb.set_trace() running
-# inside automated test suites.
 
         ### Examine generated contents ###
         plog.info('Examine generated contents')
 
+#        for sc in capture: print('***', sc)
         self.assertEqual(len(capture), 42)
         # lines = []
         # with open(self.log_fn) as f:
@@ -134,9 +153,7 @@ class MyTestClass():
 
     def go(self):
         # Set a breakpoint here then step through and examine the code.
-        print('--- 100')
         pbot_pdb.breakpoint()
-        print('--- 200')
 
         ret = self.klass_function_1(911, 'abcd')
 
