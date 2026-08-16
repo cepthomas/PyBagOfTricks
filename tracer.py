@@ -8,9 +8,16 @@ import inspect
 import threading
 
 
-#-----------------------------------------------------------------------------------
-#---------------------------- Private fields ---------------------------------------
-#-----------------------------------------------------------------------------------
+# ---------------------- Args ----------------------------------
+
+# If false continue to execute the steps after error.
+_stop_on_exception = False
+
+# Arg separators for records.
+_sep = ('(', ')')  # or ('[', ']') ('|', '|')
+
+
+# ---------------------- Internals ----------------------------------
 
 # The trace file object.
 _ftrace = None
@@ -21,19 +28,11 @@ _trace_start_time = 0
 # Dynamic flag controls execution.
 _trace_enabled = False
 
-# If false continue to execute the steps after error.
-_stop_on_exception = False
-
-# Arg separators for records.
-_sep = ('(', ')')  # or ('[', ']') ('|', '|')
-
 # Thread lock for writing.
 _lock = threading.Lock()
 
 
-#-----------------------------------------------------------------------------------
-#---------------------------- Public trace functions -------------------------------
-#-----------------------------------------------------------------------------------
+#---------------------------- Public functions -------------------------------
 
 #---------------------------------------------------------------------------
 def start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')')):
@@ -42,10 +41,7 @@ def start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')')):
     - stop_on_exception: If false continue to execute the steps after error.
     - sep: Arg separators for records. '[', ']', '|',...
     '''
-    global _ftrace
-    global _trace_start_time
-    global _trace_enabled
-    global _stop_on_exception
+    global _ftrace, _trace_start_time, _trace_enabled, _stop_on_exception
 
     stop()  # just in case
 
@@ -167,10 +163,7 @@ def trfunc(f):
     return wrapper
 
 
-#-----------------------------------------------------------------------------------
 #---------------------------- Private functions ------------------------------------
-#-----------------------------------------------------------------------------------
-
 
 #---------------------------------------------------------------------------
 def _trace(func_name, line, args=None):

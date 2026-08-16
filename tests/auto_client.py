@@ -11,6 +11,8 @@ import traceback
 HOST = '127.0.0.1'
 PORT = 59120
 
+for a in sys.argv:
+    print('a:', a)
 
 #------------------------------------------------------------------------------
 class AutoTcpClient(object):
@@ -26,16 +28,13 @@ class AutoTcpClient(object):
         run = True
 
         while run:
-
             try:
                 print(f'Starting client on {HOST}:{PORT}')
 
-                # TCP socket client
+                # Connect socket
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
                 # Block with timeout.
                 self.sock.settimeout(5)
-
                 self.sock.connect((HOST, PORT))
 
                 # Didn't fault so must be success.
@@ -43,11 +42,11 @@ class AutoTcpClient(object):
                 print('Connected to server')
 
                 # Anything to send? Check for user input.
-                commands = ['w', 'l', 'n'] # TODO1 pass as args + port
+                commands = ['w', 'l', 'n'] # TODO1? pass as args + port
                 while len(commands) > 0:
 
                     smsg = commands.pop(0)
-                    self.commif.write(smsg)# + MDEL)
+                    self.commif.write(smsg)
                     self.commif.flush()
                     print(f'CMD [{smsg}]')
 

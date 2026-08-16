@@ -7,23 +7,34 @@ import traceback
 import shutil
 
 
-# ---------------------- Configuration ----------------------------------
-# TODO1 Make some/all configurable by client cmd line?
+# ---------------------- Properties ----------------------------------
 
-### Required
-PORT = -1
+# Where I live.
+def set_port(port): global _port; _port = port
+def set_host(host): global _host; _host = host
 
-### Optional.
-HOST = '127.0.0.1'
-
-# Where to log or None.
-LOG_FN = None
+# Where to log or None for no logging.
+def set_log_fn(fn): global _log_fn; _log_fn = fn
 
 # Translate non-ascii content.
-XLAT = {}
+def set_xlat(xlat): global _xlat; _xlat = xlat
 
-# Ansi color (https://en.wikipedia.org/wiki/ANSI_escape_code)
-USE_COLOR = False
+# Use ansi color (https://en.wikipedia.org/wiki/ANSI_escape_code)
+def set_color(clr): global _use_color; _use_color = clr
+
+
+# ---------------------- Internals ----------------------------------
+
+_port = None
+
+_host = '127.0.0.1'
+
+_log_fn = None
+
+_xlat = None
+
+_use_color = True
+
 CURRENT_LINE_COLOR = 93 # yellow
 EXCEPTION_LINE_COLOR = 92 # green
 STACK_LOCATION_COLOR = 96 # cyan
@@ -31,11 +42,7 @@ PROMPT_COLOR = 94 # blue
 ERROR_COLOR = 91 # red
 
 
-# ---------------------- Vars ----------------------------------
-
-
-
-# ---------------------- TCP flavor -------------------------------------
+# ---------------------- Socket I/F -------------------------------------
 class CommIf(object):
     '''
     Read/write interface to socket. Makes socket look like a file object.
@@ -98,7 +105,7 @@ class CommIf(object):
                     # debug(f'DBG Send response: {s}')
                     color = None
 
-                    if USE_COLOR:
+                    if _use_color:
                         if s.startswith('-> '): color = CURRENT_LINE_COLOR
                         elif ' ->' in s: color = CURRENT_LINE_COLOR
                         elif s.startswith('>> '): color = EXCEPTION_LINE_COLOR
@@ -109,7 +116,7 @@ class CommIf(object):
                     self._send(f'{s}\n' if color is None else f'\033[{color}m{s}\033[0m\n')
 
                 # Write prompt.
-                self._send(f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if USE_COLOR else '(Pdb)')
+                self._send(f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if _use_color else '(Pdb)')
                 # debug(f'write(): {msg}')
 
                 # Reset buffer.
@@ -140,18 +147,18 @@ class PbotPdb(pdb.Pdb):
         
         try:
             # Initialize logging. Maybe roll over log now.
-            if LOG_FN and os.path.exists(LOG_FN) and os.path.getsize(LOG_FN) > 50000:
-                bup = LOG_FN.replace('.log', '_old.log')
-                shutil.copyfile(LOG_FN, bup)
+            if _log_fn and os.path.exists(_log_fn) and os.path.getsize(_log_fn) > 50000:
+                bup = _log_fn.replace('.log', '_old.log')
+                shutil.copyfile(_log_fn, bup)
                 # Clear current log file.
-                with open(LOG_FN, 'w'):
+                with open(_log_fn, 'w'):
                     pass
 
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(5)  # Seconds.
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-            self.sock.bind((HOST, PORT))
-            info(f'Server started on {HOST}:{PORT} - waiting for connection.')
+            self.sock.bind((_host, _port))
+            info(f'Server started on {_host}:{_port} - waiting for connection.')
 
             # Blocks until client connect or timeout.
             self.sock.listen(1)
@@ -172,7 +179,6 @@ class PbotPdb(pdb.Pdb):
         except Exception as e:
             # Other error handler. ?? ConnectionError, socket.timeout
             error('init failed', e)
-
 
     # --------------- Go! ---------------------
     def breakpoint(self, frame):
@@ -219,11 +225,11 @@ def debug(message): _write_log('DBG', message)
 
 def _write_log(level, message, e=None):
     '''Format a standard message with caller info and log it.'''
-    if not LOG_FN: return
+    if not _log_fn: return
 
     tb = None if not e else e.__traceback__
 
-    for k, v in XLAT.items():
+    for k, v in _xlat.items():
         message = message.replace(k, v)
 
     # Get caller info.
@@ -234,7 +240,7 @@ def _write_log(level, message, e=None):
     time_str = f'{str(datetime.datetime.now())}'[0:-3]
 
     # Write the record. TODO need thread sync?
-    with open(LOG_FN, 'a') as log:
+    with open(_log_fn, 'a') as log:
         out_line = f'{time_str} {level} PPDB {fn}({line}) {message}'
         log.write(out_line + '\n')
         if tb is not None:

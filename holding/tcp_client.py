@@ -21,29 +21,27 @@ Generic TCP Client
 - Use ctrl-C to exit the client. The server will also stop/unblock.
 '''
 
-# TODO1 pass config in from file/cli
+# TODO pass config in from file/cli
 
 # Where to log. None indicates no logging.
-LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
+_log_fn = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
 
 # TCP host.
-HOST = '127.0.0.1'
+_host = '127.0.0.1'
 
 # TCP port
-PORT = 59120
+_port = 59120
 
-# Delimiter for socket message lines.
-MDEL = '\u000A' # NL
+# Readable
+_xlat = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
 
-# Indicate internal message
-MSG_IND = '!'
 
 #------------------------------------------------------------------------------
 class GenericTcpClient(object):
 
     def __init__(self):
         '''Construction.'''
-        plog.init('TCPC', LOG_FN, readable=True)
+        plog.init('TCPC', _log_fn, xlat=_xlat)
         plog.enable(True)
 
         self.sock = None
@@ -66,7 +64,7 @@ class GenericTcpClient(object):
     def go(self):
         '''Run the main loop.'''
         try:
-            s = f'Starting client on {HOST}:{PORT}'
+            s = f'Starting client on {_host}:{_port}'
             plog.info(s)
             self.tell_user(s)
             run = True
@@ -74,7 +72,7 @@ class GenericTcpClient(object):
             ##### Run user cli input in a thread.
             def worker():
                 while run:
-                    self.cmd_queue.put_nowait(sys.stdin.readline().replace(MDEL, ''))
+                    self.cmd_queue.put_nowait(sys.stdin.readline().replace('\n', ''))
             threading.Thread(target=worker, daemon=True).start()
 
             ##### Forever loop #####
@@ -90,7 +88,7 @@ class GenericTcpClient(object):
                     self.sock.settimeout(float(self.server_response_time) / 1000.0)
 
                     try:
-                        self.sock.connect((HOST, PORT))
+                        self.sock.connect((_host, _port))
 
                         # Didn't fault so must be success.
                         self.commif = self.sock.makefile('rw')
@@ -130,7 +128,7 @@ class GenericTcpClient(object):
 
                     if self.commif is not None:
                         # self.do_debug(f'Send command: {self.make_readable(s)}')
-                        self.commif.write(s + MDEL)
+                        self.commif.write(s + '\n')
                         self.commif.flush()
                         # Measure round trip for timeout.
                         self.sendts = self.get_msec()
@@ -192,7 +190,7 @@ class GenericTcpClient(object):
 
     def tell_user(self, msg):
         '''Tell user something.'''
-        sys.stdout.write(f'{MSG_IND} {msg}\n')
+        sys.stdout.write(f'! {msg}\n')
 
     def get_msec(self):
         '''Get current msec.'''

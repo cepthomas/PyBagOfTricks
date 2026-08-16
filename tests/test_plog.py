@@ -7,6 +7,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import plog
 
 
+__unittest = True
+
 #-----------------------------------------------------------------------------------
 class TestPlog(unittest.TestCase):
 

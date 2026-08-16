@@ -12,10 +12,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pbot_pdb
 import plog
 
-# __unittest = True  # Tells unittest to completely ignore frames in this module
 
 # A unit test with the client running in a thread. Needs more debugging.
-# Other possible test code.
+# Also other possible test code.
 
 
 #-----------------------------------------------------------------------------------
@@ -38,7 +37,7 @@ class TestPbotExtra(unittest.TestCase):
         ### Configure ppdb. ###
         pbot_pdb.PORT = 59120
         pbot_pdb.XLAT = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
-        pbot_pdb.LOG_FN = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'pbot_ppdb.log'))
+        pbot_pdb.LOG_FN = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'pbot_pdb.log'))
         try: os.remove(pbot_pdb.LOG_FN)
         except: pass
 

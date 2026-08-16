@@ -8,11 +8,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pbot_pdb
 import plog
 
+__unittest = True
 
 # python -m unittest test_ppdb.py
 
-# __unittest = True  # Tells unittest to completely ignore frames in this module
-
+xlat = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
 
 #-----------------------------------------------------------------------------------
 class TestPbotPdb(unittest.TestCase):
@@ -21,7 +21,8 @@ class TestPbotPdb(unittest.TestCase):
         self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'test_ppdb.log'))
         try: os.remove(self.log_fn)
         except: pass
-        plog.init('PTST', self.log_fn, readable=False) #True)
+
+        plog.init('PTST', self.log_fn, xlat=xlat)
         plog.enable(True)
 
     def tearDown(self):
@@ -43,19 +44,21 @@ class TestPbotPdb(unittest.TestCase):
         # Benign reload in case of edited.
         # importlib.reload(pbot_pdb)
 
-        # Run some fake code.
+        # Run some test code.
         self.function1('ABCD')
 
 
     #------------------------------------------------------------------
     def test_ppdb_tcp(self):
 
-        # Configure ppdb.
-        pbot_pdb.PORT = 59120
-        # pbot_pdb.USE_COLOR = True
-        pbot_pdb.XLAT = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
-        pbot_pdb.LOG_FN = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'pbot_ppdb.log'))
-        try: os.remove(pbot_pdb.LOG_FN)
+        # Configure ppdb. ???      def __init__(self, port, log_fn, host=None, xlat=None, color=True):
+
+        pbot_pdb.set_port(59120)
+        pbot_pdb.set_color(True)
+        pbot_pdb.set_xlat({'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'})
+        ppdb_log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'pbot_pdb.log'))
+        pbot_pdb.set_log_fn(ppdb_log_fn)
+        try: os.remove(ppdb_log_fn)
         except: pass
 
         commif = None
@@ -68,7 +71,8 @@ class TestPbotPdb(unittest.TestCase):
             pass
 
         fc = R'C:\Dev\Libs\PyBagOfTricks\tests\auto_client.py'
-        cp = subprocess.run(['py', fc], universal_newlines=True, capture_output=True, text=True, shell=True)
+        cp = subprocess.run(['py', fc, '59120', 'w', 'l', 'n'], universal_newlines=True, capture_output=True, text=True, shell=True)
+        # cp = subprocess.run(['py', fc, 59120, 'w', 'l', 'n'], universal_newlines=True, capture_output=True, text=True, shell=True)
 
         # Examine generated contents
         plog.info('Examine generated contents')

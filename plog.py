@@ -8,27 +8,29 @@ import shutil
 import threading
 from ntpath import exists
 
+# __unittest = True
 
 # Dumb simple logger for python.
 
-#-------------------------------------------------------------------------------
-#---------------------------- Vars ---------------------------------------------
-#-------------------------------------------------------------------------------
 
-# Log file name. Arg req.
-_log_fn = '???'
+# ---------------------- Args ----------------------------------
 
 # Logger name. Arg req.
 _name = '???'
 
+# Log file name.
+_log_fn = '???'
+
 # Mode - overwrite/append. Arg opt - default is append
 _mode = '?'
 
-# Make readable, stuff like \n etc.
-_readable = False
-
 # Max log file lines. Arg opt.
 _max = 1000
+
+# User-supplied dict of val: replacement string so we can see things like LF, CR, ESC in log.
+_xlat = None
+
+# ---------------------- Internals ----------------------------------
 
 # The log file object.
 _f = None
@@ -36,34 +38,27 @@ _f = None
 # Thread lock for writing.
 _lock = threading.Lock()
 
-# For elapsed time stamps.
-_start_time = time.perf_counter_ns()
-
 # Capturing.
 _enabled = False
 
 # Simple file size mgmt.
 _line_cnt = 0
 
-# TODO1 user-supplied list like pbot_pdb.py.'''
-XLAT = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
 
-#-------------------------------------------------------------------------------
 #---------------------------- Lifecycle ----------------------------------------
-#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-def init(name, fn, append=True, readable=False, max=1000):
+def init(name, fn, append=True, max=1000, xlat=None):
     ''' Start the file '''
-    global _name, _log_fn, _readable, _mode, _max, _f, _enabled
+    global _name, _log_fn, _mode, _max, _xlat, _f, _enabled
 
     stop() # just in case
 
     _name = name
     _log_fn = fn
-    _readable = readable
     _max = max
     _mode = 'a' if append else 'w'
+    _xlat = xlat
 
     with _lock:
         try:
@@ -88,9 +83,7 @@ def stop():
         finally:
             _f = None
 
-#-------------------------------------------------------------------------------
 #---------------------------- Public Functions ---------------------------------
-#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 def enable(enb):
@@ -132,12 +125,10 @@ def debug(message):
 #-------------------------------------------------------------------------------
 def dump():
     '''Diagnostic.'''
-    return f'plog name:{_name} mode:{_mode} readable:{_readable} fn:{_log_fn} max:{_max} line_cnt:{_line_cnt}'
+    return f'plog name:{_name} mode:{_mode} fn:{_log_fn} max:{_max} line_cnt:{_line_cnt}'
 
 
-#-------------------------------------------------------------------------------
 #---------------------------- Private Functions --------------------------------
-#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 def _write_log(slevel, message, tb=None):
@@ -148,8 +139,9 @@ def _write_log(slevel, message, tb=None):
         _enabled = False
         raise RuntimeError('Logger has not been initialized.')
 
-    if _readable:
-        message = _make_readable(message)
+    if _xlat:
+        for k, v in _xlat.items():
+            message = message.replace(k, v)
 
     # Get caller info.
     frame = sys._getframe(2)
@@ -186,13 +178,6 @@ def _write_log(slevel, message, tb=None):
             os.rename(_log_fn, old_fn)
             _f = open(_log_fn, _mode)
             _line_cnt = 0
-
-#-------------------------------------------------------------------------------
-def _make_readable(s):
-    '''So we can see things like LF, CR, ESC in log.'''
-    for k, v in XLAT.items():
-        s = s.replace(k, v)
-    return s
 
 #-------------------------------------------------------------------------------
 def _get_msec():
