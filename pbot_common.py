@@ -16,7 +16,6 @@ right_delim = '>'
 
 def make_readable(s):
     buff = []
-    out_pos = 0
 
     # for k, v in xlat_tbl.items():
     #     s = s.replace(k, v)
@@ -25,23 +24,18 @@ def make_readable(s):
     for ch in s:
         if ch >= ' ' and ch <= '~': # ascii printable
             buff.append(ch)
-            out_pos += 1
-
         elif ch in xlat_tbl:
-            start_pos = out_pos
             sout = xlat_tbl[ch]
+            buff.append(left_delim)
             buff.append(sout)
-            out_pos += len(sout)
+            buff.append(right_delim)
 
         else: # Everything else is binary.
-            start_pos = out_pos
+            buff.append(left_delim)
             if ch < ' ':
-                sout = f'{left_delim}0x{ord(ch):02X}{right_delim}'
-                buff.append(sout)
-                out_pos += len(sout)
+                buff.append(f'0x{ord(ch):02X}')
             else:
-                sout = f'{left_delim}U+{ord(ch):04X}{right_delim}'
-                buff.append(sout)
-                out_pos += len(sout)
+                buff.append(f'U+{ord(ch):04X}')
+            buff.append(right_delim)
 
-    return buff
+    return ''.join(buff) 

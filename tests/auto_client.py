@@ -11,9 +11,13 @@ import traceback
 _host = '127.0.0.1'
 _port = 59120
 
+
+def tell(msg):
+    print('auto_client.py:', msg)
+
+
 for a in sys.argv:
-    print('=> a:', a)
-    sys.stdout.write(f'stdout: [{a}]')
+    tell(f'arg:[{a}]')
 
 
 #------------------------------------------------------------------------------
@@ -26,12 +30,12 @@ class AutoTcpClient(object):
 
     def go(self):
 
-        print('===== Capture')
+        tell('===== Capture')
         run = True
 
         while run:
             try:
-                print(f'Starting client on {_host}:{_port}')
+                tell(f'Starting client on {_host}:{_port}')
 
                 # Connect socket
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -41,7 +45,7 @@ class AutoTcpClient(object):
 
                 # Didn't fault so must be success.
                 self.commif = self.sock.makefile('rw')
-                print('Connected to server')
+                tell('Connected to server')
 
                 # Anything to send? Check for user input.
                 commands = ['w', 'l', 'n'] # TODO1? pass as args + port
@@ -49,7 +53,7 @@ class AutoTcpClient(object):
                     smsg = commands.pop(0)
                     self.commif.write(smsg)
                     self.commif.flush()
-                    print(f'CMD [{smsg}]')
+                    tell(f'CMD [{smsg}]')
 
                     # Get any server responses.
                     self.sock.settimeout(1)
@@ -67,7 +71,7 @@ class AutoTcpClient(object):
 
                     # Process any capture.
                     for s in sresp.splitlines():
-                        print(f'RSP [{s}]')
+                        tell(f'RSP [{s}]')
 
                     # Delay a bit.
                     time.sleep(0.1)
@@ -75,19 +79,19 @@ class AutoTcpClient(object):
                 run = False
 
             except TimeoutError:
-                print('TimeoutError')
+                tell('TimeoutError')
 
             except ConnectionError as e:
                 # BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError.
-                print(f'ConnectionError: {type(e)}')
+                tell(f'ConnectionError: {type(e)}')
 
             except KeyboardInterrupt:
                 # Hard shutdown, ignore and quit.
-                print('KeyboardInterrupt')
+                tell('KeyboardInterrupt')
 
             except Exception as e:
                 # Other unexpected error.
-                print(f'Other Error: {type(e)}')
+                tell(f'Other Error: {type(e)}')
 
         if self.commif is not None:
             self.commif.close()
@@ -97,7 +101,7 @@ class AutoTcpClient(object):
             self.sock.close()
             self.sock = None
 
-        print(f'=====')
+        tell(f'=====')
 
         sys.exit(0)
 

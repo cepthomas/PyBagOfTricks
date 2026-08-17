@@ -12,6 +12,7 @@ import plog
 
 __unittest = True
 
+print('--- load')
 
 #-----------------------------------------------------------------------------------
 class TestPbotPdb(unittest.TestCase):
@@ -35,17 +36,21 @@ class TestPbotPdb(unittest.TestCase):
 
     def function1(self, arg):
         # Set a breakpoint here then step through and examine the code.
+        plog.info('set bp')
         pbot_pdb.breakpoint(59120, self.log_fn)
+        plog.info('done bp')
         return self.function2(len(arg))
 
     def go(self, edit):
         del edit
+        plog.info('go() enter')
 
         # Benign reload in case of edited.
         # importlib.reload(pbot_pdb)
 
         # Run some test code.
         self.function1('ABCD')
+        plog.info('go() exit')
 
 
     #------------------------------------------------------------------
@@ -54,15 +59,45 @@ class TestPbotPdb(unittest.TestCase):
         commif = None
         # capture = []
 
-        # Run the c-u-t.
+        plog.info('test_ppdb_tcp() enter')
+        print('--- test_ppdb_tcp() enter')
+
+        # Run the client.
+        fc = os.path.join(h.my_dir(), 'auto_client.py')
+        args = ['python', fc, '59120', 'w', 'l', 'n']
+
+        # 1) blocks:
+        # cp = subprocess.run(args, shell=True, universal_newlines=True, text=True)#, capture_output=True)#)
+
+        # 2) run in new thread:
+        self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)#, cwd=working_dir)
+        self.killed = False
+        threading.Thread(target=self.read_handle, args=(self.proc.stdout,)).start()
+
+        # 3) detached:
+        # Windows: Use creation flags to detach the process and prevent a new window
+        # 0x00000008 = DETACHED_PROCESS, 0x00000200 = CREATE_NEW_PROCESS_GROUP
+        # Combined flag value is 0x00000208
+        # p = subprocess.Popen(
+        #     args,
+        #     creationflags=0x00000208,
+        #     stdout=subprocess.DEVNULL,
+        #     stderr=subprocess.DEVNULL,
+        #     stdin=subprocess.DEVNULL,
+        #     close_fds=True
+        # )
+
+
+        print('client running')
+        plog.info('--- client running')
+
+        # Run the code under test.
+        plog.info('try go')
         try:
             self.go(None)
         except Exception as e:
+            plog.info('try go except')
             pass
-
-        fc = os.path.join(h.my_dir(), 'auto_client.py')
-        cp = subprocess.run(['py', fc, '59120', 'w', 'l', 'n'], universal_newlines=True, capture_output=True, text=True, shell=True)
-        # cp = subprocess.run(['py', fc, 59120, 'w', 'l', 'n'], universal_newlines=True, capture_output=True, text=True, shell=True)
 
         # Examine generated contents
         plog.info('Examine generated contents')
@@ -82,6 +117,47 @@ class TestPbotPdb(unittest.TestCase):
         if commif is not None:
             commif.close()
             commif = None
+
+
+
+
+    def read_handle(self, handle):
+        chunk_size = 2 ** 13
+        out = b''
+
+        while True:
+            try:
+                data = os.read(handle.fileno(), chunk_size)
+                # If exactly the requested number of bytes was read, there may be more data,
+                # and the current data may contain part of a multibyte char
+                out += data
+                if len(data) == chunk_size:
+                    continue
+                if data == b'' and out == b'':
+                    raise IOError('EOF')
+
+                # We pass out to a function to ensure the timeout gets the value of out right now,
+                # rather than a future (mutated) version
+                self.queue_write(out.decode(self.encoding))
+                if data == b'':
+                    raise IOError('EOF')
+                out = b''
+            except (UnicodeDecodeError) as e:
+                msg = 'Error decoding output using %s - %s'
+                self.queue_write(msg  % (self.encoding, str(e)))
+                break
+            except (IOError):
+                if self.killed:
+                    msg = 'Cancelled'
+                else:
+                    msg = 'Finished'
+                self.queue_write('\n[%s]' % msg)
+                break
+
+
+
+
+
 
 
     #------------------------------------------------------------------
