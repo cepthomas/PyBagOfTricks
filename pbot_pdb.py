@@ -9,6 +9,8 @@ import shutil
 
 # ---------------------- Properties ----------------------------------
 
+# TODO1 don't like this!!
+
 # Where I live.
 def set_port(port): global _port; _port = port
 def set_host(host): global _host; _host = host

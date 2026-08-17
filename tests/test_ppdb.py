@@ -10,15 +10,13 @@ import plog
 
 __unittest = True
 
-# python -m unittest test_ppdb.py
-
 xlat = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
 
 #-----------------------------------------------------------------------------------
 class TestPbotPdb(unittest.TestCase):
 
     def setUp(self):
-        self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'test_ppdb.log'))
+        self.log_fn = os.path.abspath(os.path.join(os.path.dirname(__file__), 'out', 'test_ppdb.log'))
         try: os.remove(self.log_fn)
         except: pass
 
@@ -56,7 +54,7 @@ class TestPbotPdb(unittest.TestCase):
         pbot_pdb.set_port(59120)
         pbot_pdb.set_color(True)
         pbot_pdb.set_xlat({'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'})
-        ppdb_log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'pbot_pdb.log'))
+        ppdb_log_fn = os.path.abspath(os.path.join(os.path.dirname(__file__), 'out', 'pbot_pdb.log'))
         pbot_pdb.set_log_fn(ppdb_log_fn)
         try: os.remove(ppdb_log_fn)
         except: pass
@@ -70,7 +68,7 @@ class TestPbotPdb(unittest.TestCase):
         except Exception as e:
             pass
 
-        fc = R'C:\Dev\Libs\PyBagOfTricks\tests\auto_client.py'
+        fc = os.path.abspath(os.path.join(os.path.dirname(__file__), 'auto_client.py'))
         cp = subprocess.run(['py', fc, '59120', 'w', 'l', 'n'], universal_newlines=True, capture_output=True, text=True, shell=True)
         # cp = subprocess.run(['py', fc, 59120, 'w', 'l', 'n'], universal_newlines=True, capture_output=True, text=True, shell=True)
 
@@ -92,3 +90,8 @@ class TestPbotPdb(unittest.TestCase):
         if commif is not None:
             commif.close()
             commif = None
+
+#------------------------------------------------------------------------------
+if __name__ == '__main__':
+    print('Error! Use python -m unittest <testfile.py>')
+    sys.exit(1)

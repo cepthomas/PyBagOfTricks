@@ -115,7 +115,7 @@ class TestTracer(unittest.TestCase):
         pass
 
     def test_success(self):
-        trace_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'test_tracer.log'))
+        trace_fn = os.path.abspath(os.path.join(os.path.dirname(__file__), 'out', 'test_tracer.log'))
         tr.start(trace_fn, clean_file=True, stop_on_exception=True, sep=('(', ')'))
 
         T(f'Start {do_a_suite.__name__}:{do_a_suite.__doc__} {datetime.datetime.now()}')
@@ -128,3 +128,8 @@ class TestTracer(unittest.TestCase):
             lines = f.readlines()
 
         self.assertEqual(len(lines), 25)
+
+#------------------------------------------------------------------------------
+if __name__ == '__main__':
+    print('Error! Use python -m unittest <testfile.py>')
+    sys.exit(1)

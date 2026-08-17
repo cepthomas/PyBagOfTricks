@@ -13,7 +13,7 @@ __unittest = True
 class TestPlog(unittest.TestCase):
 
     def setUp(self):
-        self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'test_plog.log'))
+        self.log_fn = os.path.abspath(os.path.join(os.path.dirname(__file__), 'out', 'test_plog.log'))
         
     def tearDown(self):
         pass
@@ -59,3 +59,8 @@ class TestPlog(unittest.TestCase):
         with open(self.log_fn) as f:
             lines = f.readlines()
         self.assertEqual(len(lines), 5)
+
+#------------------------------------------------------------------------------
+if __name__ == '__main__':
+    print('Error! Use python -m unittest <testfile.py>')
+    sys.exit(1)

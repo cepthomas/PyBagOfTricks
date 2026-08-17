@@ -21,7 +21,7 @@ import plog
 class TestPbotExtra(unittest.TestCase):
 
     def setUp(self):
-        self.log_fn = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'test_ppdb_threaded.log'))
+        self.log_fn = os.path.abspath(os.path.join(os.path.dirname(__file__), 'out', 'test_ppdb_threaded.log'))
         try: os.remove(self.log_fn)
         except: pass
         plog.init('PTST', self.log_fn, readable=False) #True)
@@ -37,7 +37,7 @@ class TestPbotExtra(unittest.TestCase):
         ### Configure ppdb. ###
         pbot_pdb.PORT = 59120
         pbot_pdb.XLAT = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
-        pbot_pdb.LOG_FN = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'pbot_pdb.log'))
+        pbot_pdb.LOG_FN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'out', 'pbot_pdb.log'))
         try: os.remove(pbot_pdb.LOG_FN)
         except: pass
 

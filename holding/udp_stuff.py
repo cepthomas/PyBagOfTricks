@@ -170,7 +170,7 @@ def test_udp(self):
     ### Configure ppdb. ###
     # pbot_pdb.MODE = 'UDP'
     pbot_pdb.PORT = 59140
-    pbot_pdb.LOG_FN = os.path.join(os.path.join(os.path.dirname(__file__), 'out', 'pbot_pdb.log'))
+    pbot_pdb.LOG_FN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'out', 'pbot_pdb.log'))
 
     ### Run simulated remote client in a thread. ###
     def worker():
