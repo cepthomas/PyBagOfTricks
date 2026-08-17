@@ -6,8 +6,8 @@ import threading
 import queue
 import datetime
 import traceback
-# Insert path to parent dir.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import pbot_common as com
+com.add_path_to_parent()
 import plog
 
 
@@ -32,16 +32,13 @@ _host = '127.0.0.1'
 # TCP port
 _port = 59120
 
-# Readable
-_xlat = {'\n': '<NL>', '\r': '<CR>', '\u001b': '<ESC>'}
-
 
 #------------------------------------------------------------------------------
 class GenericTcpClient(object):
 
     def __init__(self):
         '''Construction.'''
-        plog.init('TCPC', _log_fn, xlat=_xlat)
+        plog.init('TCPC', _log_fn)
         plog.enable(True)
 
         self.sock = None

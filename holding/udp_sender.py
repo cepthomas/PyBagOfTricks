@@ -4,16 +4,15 @@ import os
 import importlib
 import random
 import time
-# Insert path to parent dir.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import pbot_common as com
+com.add_path_to_parent()
 import plog
 
 
 ### config ###
-LOG_FN = os.path.join(os.path.dirname(__file__), '..', 'log', 'udp_sender.log')
-HOST = '127.0.0.1' # 'localhost'
-PORT = 59140
-TIMEOUT = 5
+_log_fn = os.path.join(os.path.dirname(__file__), '..', 'log', 'udp_sender.log')
+_host = '127.0.0.1' # 'localhost'
+_port = 59140
 
 ### vars ###
 _seq_num = 0
@@ -48,7 +47,7 @@ def send(msg):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
             msg = f'{msg}'
-            udp_socket.sendto(msg.encode('utf-8'), (HOST, PORT))
+            udp_socket.sendto(msg.encode('utf-8'), (_host, _port))
 
     except Exception as e:
         plog.error("An error occurred", e)
@@ -67,10 +66,9 @@ else: # or wait until we are told to go.
     exit = False
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind((HOST, PORT))
-        if TIMEOUT > 0:
-            sock.settimeout(TIMEOUT)  # Seconds.
-        # self._debug(f'UDP on {HOST}:{PORT} [{TIMEOUT}]')
+        sock.bind((_host, _port))
+        sock.settimeout(5)  # Seconds.
+        # self._debug(f'UDP on {_host}:{_port} [{TIMEOUT}]')
 
         while not exit:
             try:

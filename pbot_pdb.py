@@ -5,43 +5,12 @@ import os
 import datetime
 import traceback
 import shutil
-
-
-# ---------------------- Properties ----------------------------------
-
-# TODO1 don't like this!!
-
-# Where I live.
-def set_port(port): global _port; _port = port
-def set_host(host): global _host; _host = host
-
-# Where to log or None for no logging.
-def set_log_fn(fn): global _log_fn; _log_fn = fn
-
-# Translate non-ascii content.
-def set_xlat(xlat): global _xlat; _xlat = xlat
-
-# Use ansi color (https://en.wikipedia.org/wiki/ANSI_escape_code)
-def set_color(clr): global _use_color; _use_color = clr
+import pbot_common as com
 
 
 # ---------------------- Internals ----------------------------------
 
-_port = None
-
-_host = '127.0.0.1'
-
 _log_fn = None
-
-_xlat = None
-
-_use_color = True
-
-CURRENT_LINE_COLOR = 93 # yellow
-EXCEPTION_LINE_COLOR = 92 # green
-STACK_LOCATION_COLOR = 96 # cyan
-PROMPT_COLOR = 94 # blue
-ERROR_COLOR = 91 # red
 
 
 # ---------------------- Socket I/F -------------------------------------
@@ -52,8 +21,9 @@ class CommIf(object):
     Catches exceptions for the purpose of logging only. They are re-raised.
     '''
 
-    def __init__(self, conn):
+    def __init__(self, conn, use_color):
         self.conn = conn
+        self.use_color = use_color
         self.last_cmd = None
         self.buff = ''
 
@@ -92,7 +62,7 @@ class CommIf(object):
             raise
 
         except Exception as e:
-            debug(f'CommIf.readline() other exception: {str(e)}')
+            debug(f'Other exception: {str(e)}')
             self.buff = ''
             raise
 
@@ -107,18 +77,18 @@ class CommIf(object):
                     # debug(f'DBG Send response: {s}')
                     color = None
 
-                    if _use_color:
-                        if s.startswith('-> '): color = CURRENT_LINE_COLOR
-                        elif ' ->' in s: color = CURRENT_LINE_COLOR
-                        elif s.startswith('>> '): color = EXCEPTION_LINE_COLOR
-                        elif '***' in s: color = ERROR_COLOR
-                        elif 'Error:' in s: color = ERROR_COLOR
-                        elif s.startswith('> '): color = STACK_LOCATION_COLOR
+                    if self.use_color:
+                        if s.startswith('-> '): color = com.current_line_color
+                        elif ' ->' in s: color = com.current_line_color
+                        elif s.startswith('>> '): color = com.exception_line_color
+                        elif '***' in s: color = com.error_color
+                        elif 'Error:' in s: color = com.error_color
+                        elif s.startswith('> '): color = com.stack_location_color
 
                     self._send(f'{s}\n' if color is None else f'\033[{color}m{s}\033[0m\n')
 
                 # Write prompt.
-                self._send(f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if _use_color else '(Pdb)')
+                self._send(f'\u001b[{com.prompt_color}m(Pdb)\u001b[0m ' if self.use_color else '(Pdb)')
                 # debug(f'write(): {msg}')
 
                 # Reset buffer.
@@ -132,7 +102,7 @@ class CommIf(object):
             raise
 
         except Exception as e:
-            debug(f'CommIf.write() other exception: {str(e)}')
+            debug(f'Other exception: {str(e)}')
             self.buff = ''
             raise
 
@@ -142,11 +112,16 @@ class PbotPdb(pdb.Pdb):
     '''Custom pdb using UDP.'''
 
     # --------------- Construction ---------------
-    def __init__(self):
+    def __init__(self, port, log_fn, use_color=True):
         '''Construction.'''
+        self.host = '127.0.0.1'
+        self.port = port
+        self.use_color = use_color
+        _log_fn = log_fn
+
         self.sock = None
         self.commif = None
-        
+
         try:
             # Initialize logging. Maybe roll over log now.
             if _log_fn and os.path.exists(_log_fn) and os.path.getsize(_log_fn) > 50000:
@@ -159,8 +134,8 @@ class PbotPdb(pdb.Pdb):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(5)  # Seconds.
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-            self.sock.bind((_host, _port))
-            info(f'Server started on {_host}:{_port} - waiting for connection.')
+            self.sock.bind((self.host, self.port))
+            info(f'Server started on {self.host}:{self.port} - waiting for connection.')
 
             # Blocks until client connect or timeout.
             self.sock.listen(1)
@@ -168,7 +143,7 @@ class PbotPdb(pdb.Pdb):
 
             # Connected.
             info(f'Server accepted connection from {repr(address)}.')
-            self.commif = CommIf(conn)
+            self.commif = CommIf(conn, self.use_color)
 
             # Init base.
             super().__init__(stdin=self.commif, stdout=self.commif, skip=['unittest.*', 'pbot_pdb.py'])  # pyright: ignore
@@ -231,8 +206,7 @@ def _write_log(level, message, e=None):
 
     tb = None if not e else e.__traceback__
 
-    for k, v in _xlat.items():
-        message = message.replace(k, v)
+    message = com.make_readable(message)
 
     # Get caller info.
     frame = sys._getframe(2)
@@ -241,7 +215,7 @@ def _write_log(level, message, e=None):
 
     time_str = f'{str(datetime.datetime.now())}'[0:-3]
 
-    # Write the record. TODO need thread sync?
+    # Write the record. TODO1 need thread sync?
     with open(_log_fn, 'a') as log:
         out_line = f'{time_str} {level} PPDB {fn}({line}) {message}'
         log.write(out_line + '\n')
@@ -253,7 +227,7 @@ def _write_log(level, message, e=None):
 
 
 #------------------------------ Start here -------------------------------------
-def breakpoint():
+def breakpoint(port, log_fn, use_color=True):
     '''Opens a remote PDB.'''
-    ppdb = PbotPdb()
+    ppdb = PbotPdb(port, log_fn, use_color)
     ppdb.breakpoint(sys._getframe().f_back)

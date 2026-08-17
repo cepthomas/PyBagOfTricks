@@ -2,8 +2,8 @@ import sys
 import os
 import datetime
 import unittest
-# Insert path to parent dir.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import helpers as h
+h.add_path_to_parent()
 import tracer as tr
 
 __unittest = True

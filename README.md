@@ -1,6 +1,7 @@
 # PyBagOfTricks
 
 Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
+TODO1 clean up, doc.
 
 # PbotPdb 
 

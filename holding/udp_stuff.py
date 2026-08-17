@@ -11,7 +11,7 @@ import pbot_pdb
 import plog
 
 
-# Some experiments with using UDP for the remote pdb protocol.
+# Some experiments with using UDP for the remote pdb protocol. Stale - see pbot_pdb.py.
 
 ### Required
 PORT = -1
@@ -109,7 +109,8 @@ class CommIfUdp(object):
         '''Core pdb calls this to write to cli/client. This adjusts and sends to socket.'''
         try:
             # pdb writes lines piecemeal but we want full proper lines. Presumes core is handling NLs.
-            # Easiest is to accumulate in a buffer until we see the prompt then slice and write. TODO some common with TCP.
+            # Easiest is to accumulate in a buffer until we see the prompt then slice and write.
+            # Note that some common with TCP.
             if '(Pdb)' in line:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
                     for s in self._pdbBuff.splitlines():
@@ -164,13 +165,6 @@ class CommIfUdp(object):
 ### test_ppdb.py implementation.
 
 def test_udp(self):
-    print('>>>', 'test_udp() enter')
-    plog.info('test_udp() enter')
-
-    ### Configure ppdb. ###
-    # pbot_pdb.MODE = 'UDP'
-    pbot_pdb.PORT = 59140
-    pbot_pdb.LOG_FN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'out', 'pbot_pdb.log'))
 
     ### Run simulated remote client in a thread. ###
     def worker():

@@ -6,7 +6,7 @@ import datetime
 import traceback
 import shutil
 import threading
-from ntpath import exists
+import pbot_common as com
 
 # __unittest = True
 
@@ -27,9 +27,6 @@ _mode = '?'
 # Max log file lines. Arg opt.
 _max = 1000
 
-# User-supplied dict of val: replacement string so we can see things like LF, CR, ESC in log.
-_xlat = None
-
 # ---------------------- Internals ----------------------------------
 
 # The log file object.
@@ -48,7 +45,7 @@ _line_cnt = 0
 #---------------------------- Lifecycle ----------------------------------------
 
 #-------------------------------------------------------------------------------
-def init(name, fn, append=True, max=1000, xlat=None):
+def init(name, fn, append=True, max=1000):
     ''' Start the file '''
     global _name, _log_fn, _mode, _max, _xlat, _f, _enabled
 
@@ -58,7 +55,6 @@ def init(name, fn, append=True, max=1000, xlat=None):
     _log_fn = fn
     _max = max
     _mode = 'a' if append else 'w'
-    _xlat = xlat
 
     with _lock:
         try:
@@ -139,9 +135,7 @@ def _write_log(slevel, message, tb=None):
         _enabled = False
         raise RuntimeError('Logger has not been initialized.')
 
-    if _xlat:
-        for k, v in _xlat.items():
-            message = message.replace(k, v)
+    message = com.make_readable(message)
 
     # Get caller info.
     frame = sys._getframe(2)
@@ -174,12 +168,8 @@ def _write_log(slevel, message, tb=None):
             _f.flush()
             _f.close()
             old_fn = _log_fn.replace('.log', '_old.log')
-            if exists(old_fn): os.remove(old_fn)
+            try: os.remove(old_fn)
+            except: pass
             os.rename(_log_fn, old_fn)
             _f = open(_log_fn, _mode)
             _line_cnt = 0
-
-#-------------------------------------------------------------------------------
-def _get_msec():
-    '''Get current msec.'''
-    return time.perf_counter_ns() / 1000000

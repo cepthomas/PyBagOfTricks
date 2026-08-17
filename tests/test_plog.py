@@ -2,8 +2,8 @@ import sys
 import os
 import datetime
 import unittest
-# Insert path to parent dir.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import helpers as h
+h.add_path_to_parent()
 import plog
 
 
@@ -13,13 +13,13 @@ __unittest = True
 class TestPlog(unittest.TestCase):
 
     def setUp(self):
-        self.log_fn = os.path.abspath(os.path.join(os.path.dirname(__file__), 'out', 'test_plog.log'))
-        
+        self.log_fn = h.init_log(h.my_dir(), 'out', 'test_plog.log', clean=True)
+
     def tearDown(self):
         pass
 
     def test_success(self):
-        try: os.remove(self.log_fn)
+        try: os.remove(self.log_fn)  # pyright: ignore
         except: pass
         plog.init('PLOG1', self.log_fn, max=100)
         plog.enable(True)
@@ -39,7 +39,7 @@ class TestPlog(unittest.TestCase):
         # Examine generated contents.
         plog.stop()
         lines = []
-        with open(self.log_fn) as f:
+        with open(self.log_fn) as f:  # pyright: ignore
             lines = f.readlines()
         self.assertEqual(len(lines), 42)
 
@@ -56,7 +56,7 @@ class TestPlog(unittest.TestCase):
         # Examine generated contents.
         plog.stop()
         lines = []
-        with open(self.log_fn) as f:
+        with open(self.log_fn) as f:  # pyright: ignore
             lines = f.readlines()
         self.assertEqual(len(lines), 5)
 
