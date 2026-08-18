@@ -109,7 +109,7 @@ class CommIf(object):
 
 #------------------------------------------------------------------------------
 class PbotPdb(pdb.Pdb):
-    '''Custom pdb using UDP.'''
+    '''Custom pdb using TCP.'''
 
     # --------------- Construction ---------------
     def __init__(self, port, log_fn, use_color=True):
@@ -227,7 +227,7 @@ def _write_log(level, message, e=None):
 
 
 #------------------------------ Start here -------------------------------------
-def breakpoint(port, log_fn, use_color=True):
+def breakpoint(port, log_fn=None, use_color=True):
     '''Opens a remote PDB.'''
     ppdb = PbotPdb(port, log_fn, use_color)
     ppdb.breakpoint(sys._getframe().f_back)

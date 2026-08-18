@@ -6,7 +6,7 @@ import subprocess
 import socket
 import threading
 import helpers as h
-h.add_path_to_parent()
+h.add_parent_to_path()
 import pbot_pdb
 import plog
 
@@ -37,7 +37,7 @@ class TestPbotPdb(unittest.TestCase):
     def function1(self, arg):
         # Set a breakpoint here then step through and examine the code.
         plog.info('set bp')
-        pbot_pdb.breakpoint(59120, self.log_fn)
+        pbot_pdb.breakpoint(59120, log_fn=self.log_fn)
         plog.info('done bp')
         return self.function2(len(arg))
 
@@ -70,23 +70,18 @@ class TestPbotPdb(unittest.TestCase):
         # cp = subprocess.run(args, shell=True, universal_newlines=True, text=True)#, capture_output=True)#)
 
         # 2) run in new thread:
+        # TODO1 with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as proc:#, cwd=working_dir)
         self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)#, cwd=working_dir)
         self.killed = False
-        threading.Thread(target=self.read_handle, args=(self.proc.stdout,)).start()
+        procth = threading.Thread(target=self.read_handle, args=(self.proc.stdout,))
+        procth.start()
 
-        # 3) detached:
+        # 3) fully detached:
         # Windows: Use creation flags to detach the process and prevent a new window
         # 0x00000008 = DETACHED_PROCESS, 0x00000200 = CREATE_NEW_PROCESS_GROUP
-        # Combined flag value is 0x00000208
-        # p = subprocess.Popen(
-        #     args,
-        #     creationflags=0x00000208,
-        #     stdout=subprocess.DEVNULL,
-        #     stderr=subprocess.DEVNULL,
-        #     stdin=subprocess.DEVNULL,
-        #     close_fds=True
-        # )
-
+        # p = subprocess.Popen(args, creationflags=0x00000208,
+        #     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+        #     close_fds=True)
 
         print('client running')
         plog.info('--- client running')
@@ -100,8 +95,9 @@ class TestPbotPdb(unittest.TestCase):
             pass
 
         # Examine generated contents
-        plog.info('Examine generated contents')
-        plog.info(f'\n[{cp.stdout}]')
+        # 1)
+        # plog.info('pbot_pdb said:')
+        # plog.info(f'\n[{cp.stdout}]')
 
         # for sc in capture: print('***', sc)
         # self.assertEqual(len(capture), 42)
@@ -119,20 +115,23 @@ class TestPbotPdb(unittest.TestCase):
             commif = None
 
 
-
-
+    # 2) Read process output stream
     def read_handle(self, handle):
-        chunk_size = 2 ** 13
-        out = b''
+        chunk_size = 256
+        # chunk_size = 2 ** 13 # 8192
+        out = b'' # bytes objects actually behave like immutable sequences of integers
 
         while True:
             try:
                 data = os.read(handle.fileno(), chunk_size)
+                out += data
+
                 # If exactly the requested number of bytes was read, there may be more data,
                 # and the current data may contain part of a multibyte char
-                out += data
                 if len(data) == chunk_size:
                     continue
+
+                # No data received.
                 if data == b'' and out == b'':
                     raise IOError('EOF')
 
@@ -142,10 +141,12 @@ class TestPbotPdb(unittest.TestCase):
                 if data == b'':
                     raise IOError('EOF')
                 out = b''
+
             except (UnicodeDecodeError) as e:
                 msg = 'Error decoding output using %s - %s'
                 self.queue_write(msg  % (self.encoding, str(e)))
                 break
+
             except (IOError):
                 if self.killed:
                     msg = 'Cancelled'
@@ -154,8 +155,72 @@ class TestPbotPdb(unittest.TestCase):
                 self.queue_write('\n[%s]' % msg)
                 break
 
+        # # original
+        # self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)#, cwd=working_dir)
+        # self.killed = False
+        # threading.Thread(target=self.read_handle, args=(self.proc.stdout,)).start()
+
+    # def read_handle_orig(self, handle):
+    #     chunk_size = 2 ** 13
+    #     out = b''
+
+    #     while True:
+    #         try:
+    #             data = os.read(handle.fileno(), chunk_size)
+    #             # If exactly the requested number of bytes was read, there may be more data,
+    #             # and the current data may contain part of a multibyte char
+    #             out += data
+    #             if len(data) == chunk_size:
+    #                 continue
+    #             if data == b'' and out == b'':
+    #                 raise IOError('EOF')
+
+    #             # We pass out to a function to ensure the timeout gets the value of out right now,
+    #             # rather than a future (mutated) version
+    #             self.queue_write(out.decode(self.encoding))
+    #             if data == b'':
+    #                 raise IOError('EOF')
+    #             out = b''
+    #         except (UnicodeDecodeError) as e:
+    #             msg = 'Error decoding output using %s - %s'
+    #             self.queue_write(msg  % (self.encoding, str(e)))
+    #             break
+    #         except (IOError):
+    #             if self.killed:
+    #                 msg = 'Cancelled'
+    #             else:
+    #                 msg = 'Finished'
+    #             self.queue_write('\n[%s]' % msg)
+    #             break
 
 
+# another example
+# 
+# import subprocess
+# import threading
+# import queue
+
+# def enqueue_output(out_pipe, q):
+#     for line in iter(out_pipe.readline, b''):
+#         q.put(line)
+#     out_pipe.close()
+
+# # Launch process
+# proc = subprocess.Popen(['ping', '127.0.0.1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+# q = queue.Queue()
+
+# # Setup and start read thread
+# t = threading.Thread(target=enqueue_output, args=(proc.stdout, q))
+# t.daemon = True
+# t.start()
+
+# # Read non-blocking data from the queue elsewhere in your app
+# try:
+#     while True:
+#         line = q.get_nowait()
+#         print(line.decode('utf-8').strip())
+# except queue.Empty:
+#     pass
 
 
 

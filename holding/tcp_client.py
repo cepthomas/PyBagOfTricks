@@ -7,7 +7,7 @@ import queue
 import datetime
 import traceback
 import pbot_common as com
-com.add_path_to_parent()
+com.add_parent_to_path()
 import plog
 
 

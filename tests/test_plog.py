@@ -3,7 +3,7 @@ import os
 import datetime
 import unittest
 import helpers as h
-h.add_path_to_parent()
+h.add_parent_to_path()
 import plog
 
 

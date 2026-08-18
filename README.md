@@ -3,7 +3,7 @@
 Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
 TODO1 clean up, doc.
 
-# PbotPdb 
+# PbotPdb
 
 - Component for debugging python remotely over a TCP or UDP connection.
 - Initially built to debug Sublime Text plugins but is actually generally useful standalone.
@@ -58,3 +58,22 @@ Dumb simple logger for python. One per client module, threadsafe.
 # Tracer
 Tool for tracing through code, especially function entry/exit.
 The best (only) documentation is to read [the example](https://github.com/cepthomas/PyBagOfTricks/blob/main/tests/test_tracer.py).
+
+# Files
+
+C:\Dev\Libs\PyBagOfTricks
+|   pbot_common.py (1k)
+|   pbot_pdb.py (13k)
+|   plog.py (6k)
+|   tracer.py (7k)
+|---tests
+|       auto_client.py (3k)
+|       helpers.py (690b)
+|       test_plog.py (2k)
+|       test_ppdb.py (3k)
+|       test_tracer.py (3k)
+\---holding
+        tcp_client.py (7k)          | Fancier Generic TCP Client.
+        tcp_server.py (1k)          | Simple echoing tcp server for test purposes.
+        udp_sender.py (2k)          | Broadcast a bunch of text lines.
+        udp_stuff.py (8k)           | Experiments with using UDP for the protocol.

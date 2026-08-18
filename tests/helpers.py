@@ -3,7 +3,7 @@ import os
 
 
 # Add file location to python path.
-def add_path_to_parent():
+def add_parent_to_path():
     frame = sys._getframe(1)
     dir = os.path.dirname(frame.f_code.co_filename)
     sys.path.append(os.path.abspath(os.path.join(dir, '..')))
