@@ -138,7 +138,7 @@ class PbotPdb(pdb.Pdb):
             info(f'Server started on {self.host}:{self.port} - waiting for connection.')
 
             # Blocks until client connect or timeout.
-            self.sock.listen(1)
+            self.sock.listen(5)
             conn, address = self.sock.accept()
 
             # Connected.
@@ -151,11 +151,12 @@ class PbotPdb(pdb.Pdb):
 
         except (ConnectionError, socket.timeout) as e:
             info(f'Server connection timed out, try again: {str(e)}')
-            self.do_quit() # TODO1 correct?
+            # self.do_quit() # TODO1 correct? NO, also handle invalid commif too.
 
         except Exception as e:
-            # Other error handler. ?? ConnectionError, socket.timeout
+            # Other error handler, considered fatal.
             error('init failed', e)
+            self.do_quit()
 
     # --------------- Go! ---------------------
     def breakpoint(self, frame):
@@ -167,7 +168,7 @@ class PbotPdb(pdb.Pdb):
                 super().set_trace(frame)
 
             except Exception as e:
-                # Exceptions in the code under test go to sys.excepthook so this doesn't do anything.
+                # Exceptions in the code under test go to sys.excepthook so this doesn't actually do anything.
                 error('breakpoint fail', e)
 
         debug('breakpoint() exit')
