@@ -6,10 +6,14 @@ import subprocess
 import queue
 import socket
 import threading
+import time
 import helpers as h
 h.add_parent_to_path()
-import pbot_pdb
 import plog
+
+
+_host = '127.0.0.1'
+_port = 59120
 
 
 #-----------------------------------------------------------------------------------
@@ -18,165 +22,157 @@ class TestPbotPdb(unittest.TestCase):
     def setUp(self):
         # Logging.
         self.log_fn = h.init_log(h.my_dir(), 'out', 'test_ppdb.log', clean=True)
-        self.ppdb_log_fn = h.init_log(h.my_dir(), 'out', 'pbot_pdb.log', clean=True)
-        plog.init('PTST', self.log_fn)
-        plog.enable(True)
+        # self.ppdb_log_fn = h.init_log(h.my_dir(), 'out', 'pbot_pdb.log', clean=True)
+        self.l = plog.Plog('TEST', self.log_fn)
+        self.l.enable(True)
 
         # self.captured = []
         self.q = queue.Queue()
 
     def tearDown(self):
-        plog.stop()
-
-    #---------------- Breakpoint test code ----------------------------
-    # Target test code below.
-    def function2(self, arg):
-        x = 111
-        y = 22
-        return arg + x + y
-
-    def function1(self, arg):
-        # Set a breakpoint here then step through and examine the code.
-        plog.info('function1 set bp')
-        pbot_pdb.breakpoint(59120, log_fn=self.ppdb_log_fn, use_color=False) # turn off color for unit test
-        plog.info('function1 done bp')
-        return self.function2(len(arg))
-
-    # def go(self, edit):
-    #     del edit
-    def go(self):
-        plog.info('go() enter')
-
-        # Benign reload in case of edited.
-        # importlib.reload(pbot_pdb)
-
-        # Run some test code.
-        self.function1('ABCD')
-        plog.info('go() exit')
+        self.l.stop()
 
 
     #------------------------------------------------------------------
     def test_ppdb_tcp(self):
-        '''Tests the basic tcp cmd/resp protocol.'''
+        '''Tests the .... tcp cmd/resp protocol.'''
 
-        commif = None
+        # commif = None
         self.q.empty()
 
-        plog.info('test_ppdb_tcp() enter')
+        self.l.info('test_ppdb_tcp() enter')
 
-        # Run the simulated client. It waits until breakpoint is hit.
-        fc = os.path.join(h.my_dir(), 'sim_client.py')
-        args = ['python', fc]  # ['python', fc, '59120', 'w', 'l', 'n']
+        # Run the target code which executes breakpoint() and waits.
+        fc = os.path.join(h.my_dir(), 'target.py')
+        args = ['python', fc]
+        with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as proc: #, cwd=working_dir)
+            self.killed = False
+            t = threading.Thread(target=self.read_handle, args=(proc.stdout,))
+            t.start()
 
-        # TODO1 with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as proc:#, cwd=working_dir)
-        self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)#, cwd=working_dir)
-        self.killed = False
-        t = threading.Thread(target=self.read_handle, args=(self.proc.stdout,))
-        t.start()
+            self.l.info('--- target running')
 
-        plog.info('--- client running')
+            # Send some commands.
+            
+            sresp = self.send_cmd('w')
 
-        # Run the code under test which executes breakpoint().
-        plog.info('try go')
-        try:
-            self.go()
-        except Exception as e:
-            plog.info(f'exception [{e}]')
+            sresp = self.send_cmd('l')
+
+            sresp = self.send_cmd('s')
+
+
+        # Exit the debugger.
+        sresp4 = self.send_cmd('q')
+        time.sleep(0.2)
+        self.killed = True
+        # time.sleep(0.2)
+        # proc.kill()
 
         # Examine generated contents
         while not self.q.empty():
-            plog.info(f'SIM said [{self.q.get()}]')
+            self.l.debug(f'QUE [{self.q.get().decode()}]', readable=True)
 
         # Stop
-        plog.info('exit')
-        plog.stop()
+        self.l.info('exit')
+        self.l.stop()
 
-        if commif is not None:
-            commif.close()
-            commif = None
-
+        # if commif is not None:
+        #     commif.close()
+        #     commif = None
 
     #------------------------------------------------------------------
-    # 2) Read process output stream
-    def read_handle(self, handle):
-        chunk_size = 256
-        # chunk_size = 2 ** 13 # 8192
-        out = b'' # bytes objects actually behave like immutable sequences of integers
+    def send_cmd(self, scmd):
+        '''Send one command and return response or None if failed.'''
 
-        while True:
-            try:
-                # Save the received data.
-                data = os.read(handle.fileno(), chunk_size)
-                out += data
+        sock = None
+        commif = None
+        sresp = None
 
-                # Full buffer read. Go around.
-                if len(data) == chunk_size:
-                    continue
+        try:
+            self.l.info(f'CMD [{scmd}]') #1
 
-                # No data received. Standard timeout.
-                if data == b'' and out == b'':
-                    raise IOError('EOF')
+            # Connect socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            sock.connect((_host, _port))
 
-                # Message complete. Save message received.
-                smsg = out.decode() # default = utf8 self.encoding)
-                # self.captured.append(smsg)
-                self.q.put(smsg)
+            # Didn't fault so connect was successful.
+            commif = sock.makefile('rw')
+            self.l.info('--- Connected to server')
 
-                # Message complete?
-                if data == b'':
-                    raise IOError('EOF')
+            commif.write(scmd)
+            commif.flush()
 
-                # Not yet.
-                out = b''
+            # Get server response.
+            sock.settimeout(1) # adjust to taste
 
-                # # We pass out to a function to ensure the timeout gets the value of out right now,
-                # # rather than a future (mutated) version
-                # self.queue_write(out.decode(self.encoding))
-                # if data == b'':
-                #     raise IOError('EOF')
-                # out = b''
+            self.l.info(f'--- 100')
+            sresp = commif.read(8096) # Known to be > max resp
+            self.l.info(f'--- 200 [{sresp}]')
 
-            # except (UnicodeDecodeError) as e:
-            #     msg = 'Error decoding output using %s - %s'
-            #     self.queue_write(msg  % (self.encoding, str(e)))
-            #     break
+        except TimeoutError: # Shouldn't happen.
+            self.l.info(f'--- 210 TimeoutError Shouldnt happen')
 
-            except (IOError):
-                if self.killed: # ???
-                    msg = 'Cancelled'
-                else:
-                    msg = 'Finished'
-                # self.queue_write('\n[%s]' % msg)
-                break
+        except ConnectionError as e:
+            self.l.info(f'--- 220 {type(e)} Shouldnt happen')
+            # <class 'ConnectionRefusedError'> [[WinError 10061] No connection could be made because the target machine actively refused it]
 
+        except Exception as e:
+            self.l.info(f'Other exception [{type(e)}] [{e}]')
+            # sresp = f'ERR {type(e)}'
 
+        finally:
+            # Explicit close connection.
+            self.l.info(f'finally => EXIT')
+            if commif is not None: commif.close()
+            if sock is not None: sock.close()
+            self.l.info(f'RSP [{sresp}]')
+            return sresp
 
-# ###### TODO1 or like this?
-# q = queue.Queue()
+    #------------------------------------------------------------------
+    # Read process output stream
+    def read_handle(self, out_pipe):
 
-# def enqueue_output(out_pipe, q):
-#     for line in iter(out_pipe.readline, b''):
-#         q.put(line)
-#     out_pipe.close()
+        for line in iter(out_pipe.readline, b''):
+            self.q.put(line) #line.decode())
+        #?? out_pipe.close()
 
-# # Launch process + thread.
-# proc = subprocess.Popen(['ping', '127.0.0.1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-# t = threading.Thread(target=enqueue_output, args=(proc.stdout, q))
-# # t.daemon = True
-# t.start()
-
-# # Read non-blocking data from the queue elsewhere in your app
-# try:
-#     while True:
-#         line = q.get_nowait()
-#         print(line.decode('utf-8').strip())
-# except queue.Empty:
-#     pass
-
-
+    # #------------------------------------------------------------------
+    # def read_handle_s(self, handle):
+    #     ''' Read process output stream'''
+    #     chunk_size = 256
+    #     # chunk_size = 2 ** 13 # 8192
+    #     out = b'' # bytes objects actually behave like immutable sequences of integers
+    #     while not self.killed:
+    #         try:
+    #             # Save the received data.
+    #             data = os.read(handle.fileno(), chunk_size)
+    #             out += data
+    #             # Full buffer read. Go around.
+    #             if len(data) == chunk_size:
+    #                 continue
+    #             # No data received. Standard timeout.
+    #             if data == b'' and out == b'':
+    #                 raise IOError('EOF')
+    #             # Message complete. Save message received.
+    #             smsg = out.decode() # default = utf8 self.encoding)
+    #             # self.captured.append(smsg)
+    #             self.q.put(smsg)
+    #             # Message complete?
+    #             if data == b'':
+    #                 raise IOError('EOF')
+    #             # Not yet.
+    #             out = b''
+    #         except (IOError):
+    #             if self.killed: # ???
+    #                 msg = 'Cancelled'
+    #             else:
+    #                 msg = 'Finished'
+    #             self.q.put(msg)
+    #             break
 
 
 #------------------------------------------------------------------------------
 if __name__ == '__main__':
-    print('Error! Use python -m unittest <testfile.py>')
+    print('Bad! Use python -m unittest test_ppdb.py')
     sys.exit(1)

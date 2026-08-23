@@ -1,6 +1,7 @@
 import sys
 import os
 import datetime
+import time
 import unittest
 import helpers as h
 h.add_parent_to_path()
@@ -12,53 +13,74 @@ class TestPlog(unittest.TestCase):
 
     def setUp(self):
         self.log_fn = h.init_log(h.my_dir(), 'out', 'test_plog.log', clean=True)
+        self.log_fn_old = h.init_log(h.my_dir(), 'out', 'test_plog_old.log', clean=True)
+
+        try: os.remove(self.log_fn)
+        except: pass
+        try: os.remove(self.log_fn_old)
+        except: pass
 
     def tearDown(self):
         pass
 
-    def test_success(self):
-        try: os.remove(self.log_fn)  # pyright: ignore
-        except: pass
-        plog.init('PLOG1', self.log_fn, max=100)
-        plog.enable(True)
+    def test_basic(self):
 
-        plog.info(f'================= START PLOG1 =======================')
+        l = plog.Plog('Log555', self.log_fn, max=100)
+
+        l.enable(True)
+
+        l.info(f'================= START {l.name} =======================')
         for i in range(20):
-            plog.info(f'Info message {i}')
-            plog.warn(f'Warning message {i}')
-            plog.debug(f'Debug message {i}')
-            plog.error(f'Error message {i}')
+            l.info(f'Info message {i}')
+            l.warn(f'Warning message {i}')
+            l.debug(f'Debug message {i}')
+            l.error(f'Error message {i}')
             try:
                 raise ValueError('I am very bad')
             except Exception as e:
-                plog.error(f'Error message exc {i}', e)
-        plog.info(f'================= STOP PLOG1 =======================')
+                l.error(f'Error message exc {i}', e)
+        l.info(f'================= STOP {l.name} =======================')
 
         # Examine generated contents.
-        plog.stop()
+        l.stop()
         lines = []
-        with open(self.log_fn) as f:  # pyright: ignore
+        with open(self.log_fn) as f:
             lines = f.readlines()
         self.assertEqual(len(lines), 42)
 
-        # def test_overwrite(self):
-        plog.init('PLOG2', self.log_fn, append=False)
-        plog.enable(True)
+        with open(self.log_fn_old) as f:
+            lines = f.readlines()
+        self.assertEqual(len(lines), 100)
 
-        plog.info(f'================= START PLOG1 =======================')
-        plog.info(f'Info message only')
-        plog.warn(f'Warning message only')
-        plog.debug(f'Debug message only')
-        plog.info(f'================= STOP PLOG1 =======================')
+    def test_overwrite(self):
+        #print('>>> test_overwrite')
+
+        # def test_overwrite(self):
+        l = plog.Plog('Log666', self.log_fn, append=False)
+        l.enable(True)
+
+        l.info(f'================= START {l.name} =======================')
+        time.sleep(0.123)
+        l.info(f'Info message only')
+        time.sleep(0.123)
+        l.warn(f'Warning message only')
+        time.sleep(0.123)
+        l.debug(f'Debug message only')
+        time.sleep(0.123)
+        l.info(f'================= STOP {l.name} =======================')
 
         # Examine generated contents.
-        plog.stop()
+        l.stop()
         lines = []
         with open(self.log_fn) as f:  # pyright: ignore
             lines = f.readlines()
         self.assertEqual(len(lines), 5)
 
+    def test_readable(self):
+        #print('>>> test_readable TODO1')
+        pass
+
 #------------------------------------------------------------------------------
 if __name__ == '__main__':
-    print('Error! Use python -m unittest <testfile.py>')
+    print('Error! Use python -m unittest <test_yourcode.py>')
     sys.exit(1)

@@ -14,14 +14,13 @@ _host = '127.0.0.1'
 _port = 59120
 
 # Logging.
-_log_fn = h.init_log(h.my_dir(), 'out', 'sim_client.log', clean=True)
-plog.init('SIMC', _log_fn)
-plog.enable(True)
+log_fn = h.init_log(h.my_dir(), 'out', 'sim_client.log', clean=True)
+l = plog.Plog('SIMC', log_fn)
+l.enable(True)
+l.info(f'Starting client on {_host}:{_port}')
+# for a in sys.argv: l.info(f'arg [{a}]')
 
-# for a in sys.argv: plog.info(f'arg [{a}]')
 
-
-plog.info(f'Starting client on {_host}:{_port}')
 
 def do_one(scmd):
 
@@ -30,7 +29,7 @@ def do_one(scmd):
     sresp = None
 
     try:
-        plog.info(f'CMD [{scmd}]')
+        l.info(f'CMD [{scmd}]')
 
         # Connect socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -38,35 +37,35 @@ def do_one(scmd):
         sock.connect((_host, _port))
         # Didn't fault so must be success.
         commif = sock.makefile('rw')
-        plog.info('Connected to server')
+        l.info('Connected to server')
 
         commif.write(scmd)
         commif.flush()
-        plog.info(f'--- 100')
+        l.info(f'--- 100')
 
         # Get server response.
-        plog.info(f'--- 110')
+        l.info(f'--- 110')
         sock.settimeout(1) # adjust to taste
         rcving = True
         while rcving:
             try:
                 s = commif.read(256)
-                plog.info(f'--- 200 [{s}]')
+                l.info(f'--- 200 [{s}]')
                 if sresp is None: sresp = s
                 else: sresp += s
             except TimeoutError: # Nothing more to read.
-                plog.info(f'--- 210')
+                l.info(f'--- 210')
                 rcving = False
 
     except Exception as e:
-        plog.info(f'{type(e)} [{e}]')
+        l.info(f'{type(e)} [{e}]')
         # sresp = f'ERR {type(e)}'
 
     finally:
-        plog.info(f'finally => EXIT')
+        l.info(f'finally => EXIT')
         if commif is not None: commif.close()
         if sock is not None: sock.close()
-        plog.info(f'RSP [{sresp}]')
+        l.info(f'RSP [{sresp}]')
         return sresp
 
 
@@ -80,15 +79,15 @@ while len(commands) > 0:
         time.sleep(0.2) # Delay a bit
 
     except (KeyboardInterrupt) as e:
-        plog.info(f'Keyboard => EXIT')
+        l.info(f'Keyboard => EXIT')
         sys.exit(0)
 
     except (Exception) as e:
-        plog.info(f'{type(e)} [{e}] => EXIT')
+        l.info(f'{type(e)} [{e}] => EXIT')
         sys.exit(1)
 
     finally:
-        plog.info(f'finally => EXIT')
+        l.info(f'finally => EXIT')
 
 
 sys.exit(0)

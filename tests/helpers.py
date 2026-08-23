@@ -1,6 +1,7 @@
 import sys
 import os
 
+# Handy test helpers.
 
 # Add file location to python path.
 def add_parent_to_path():
