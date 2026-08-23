@@ -6,7 +6,6 @@ import helpers as h
 h.add_parent_to_path()
 import tracer as tr
 
-__unittest = True
 
 # Some optional shorthand.
 trfunc = tr.trfunc

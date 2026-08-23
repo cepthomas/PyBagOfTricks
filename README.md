@@ -1,7 +1,7 @@
-# PyBagOfTricks
+# PyBagOfTricks  TODO1 clean up, doc.
 
 Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
-TODO1 clean up, doc.
+
 
 # PbotPdb
 
@@ -62,7 +62,6 @@ The best (only) documentation is to read [the example](https://github.com/ceptho
 # Files
 
 C:\Dev\Libs\PyBagOfTricks
-|   pbot_common.py (1k)
 |   pbot_pdb.py (13k)
 |   plog.py (6k)
 |   tracer.py (7k)

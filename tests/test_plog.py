@@ -7,8 +7,6 @@ h.add_parent_to_path()
 import plog
 
 
-__unittest = True
-
 #-----------------------------------------------------------------------------------
 class TestPlog(unittest.TestCase):
 
