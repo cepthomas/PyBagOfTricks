@@ -1,5 +1,6 @@
 import sys
 import os
+import bdb
 import helpers as h
 h.add_parent_to_path()
 import pbot_pdb
@@ -39,8 +40,25 @@ def go():
     function1('ABCD')
     l.info('go() exit')
 
+#-----------------------------------------------------------------------------------
+def excepthook(type, value, tb):
+    '''Process unhandled exceptions.'''
+
+    l.warn(f'excepthook!! type:[{type}] value:[{value}]')
+
+    # This happens with hard shutdown of SbotPdb: BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError.
+    if issubclass(type, bdb.BdbQuit) or issubclass(type, ConnectionError):
+        return
+
+    # Otherwise revert to original hook.
+    sys.__excepthook__(type, value, tb)
+
+
 #------------------------------------------------------------------------------
 if __name__ == '__main__':
+    # Connect the last chance hook.
+    sys.excepthook = excepthook
+
     print('>>> target prints hi')
     go()
     print('>>> target prints bye')

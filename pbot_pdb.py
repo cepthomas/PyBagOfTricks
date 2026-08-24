@@ -2,11 +2,10 @@ import sys
 import socket
 import pdb
 import os
-import datetime
-import traceback
-import shutil
+# import datetime
+# import traceback
+# import shutil
 import plog
-
 
 
 # ---------------------- Internals ----------------------------------
@@ -17,9 +16,7 @@ STACK_LOCATION_COLOR = 96 # cyan
 PROMPT_COLOR = 94 # blue
 ERROR_COLOR = 91 # red
 
-class PpdbError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
+# https://docs.python.org/3.8/library/socket.html
 
 #------------------------------------------------------------------------------
 class PbotPdb(pdb.Pdb):
@@ -28,56 +25,54 @@ class PbotPdb(pdb.Pdb):
     # --------------- Construction ---------------
     def __init__(self, port, log_fn, use_color=True):
         '''Construction.'''
-        # global _log_fn, _readable
         self.host = '127.0.0.1'
         self.port = port
         self.use_color = use_color
+        self.valid = False
 
         # Logging.
-        # _log_fn = log_fn
         self.l = plog.Plog('PPDB', log_fn)
         self.l.enable(True)
         self.l.info(f'Starting client on {self.host}:{self.port}')
 
-        self.sock = None
-        self.commif = None
-
         try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.settimeout(5)  # Seconds.
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-            self.sock.bind((self.host, self.port))
-            self.l.info(f'Server started on {self.host}:{self.port} - waiting for connection.')
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(5)  # Seconds.
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
+                sock.bind((self.host, self.port))
+                self.l.info(f'Server started on {self.host}:{self.port} - waiting for connection.')
 
-            # Try to connect. conn is a new socket for R/W.
-            self.sock.listen(1)
-            conn, address = self.sock.accept()
+                # Try to connect. conn is a new socket for R/W.
+                sock.listen(1)
+                conn, address = sock.accept()
 
-            # Connected.
-            chost, cport = address
-            self.l.info(f'Server accepted connection from {chost}:{cport}')
-            self.commif = CommIf(conn, self.l, self.use_color)
+                # Connected.
+                with conn:
+                    chost, cport = address
+                    self.l.info(f'Server accepted connection from {chost}:{cport}')
 
-            self.l.info(f'Server init commif')
-            # Init base.
-            super().__init__(stdin=self.commif, stdout=self.commif)  # pyright: ignore
-            # super().__init__(stdin=self.commif, stdout=self.commif, skip=['unittest.*', 'pbot_pdb.py'])  # pyright: ignore
-            # TODO 3.14+ colorize=True  mode=???   lse - enable colorized output in the debugger, if color is supported.
-            self.l.info(f'Server init commif done')
+                    with CommIf(conn, self.l, self.use_color) as commif:
+                        self.l.info(f'Server init commif')
+                        # Init base.
+                        super().__init__(stdin=commif, stdout=commif)  # pyright: ignore
+                        # TODO1 super().__init__(stdin=commif, stdout=commif, skip=['unittest.*', 'pbot_pdb.py'])  # pyright: ignore
+                        # TODO1 3.14+ colorize=True  mode=???   lse - enable colorized output in the debugger, if color is supported.
+                        self.valid = True
+                        self.l.info(f'Server init commif done')
 
         except Exception as e:
             # TODO1 Other error handler, considered fatal.
-            self.l.error('init failed', e)
+            self.l.error('Init failed', e.__traceback__)
             self.do_quit()
 
     # --------------- Go! ---------------------
     def breakpoint(self, frame):
         ''' Starts the debugger.'''
         self.l.debug('breakpoint() entry')
-        if self.commif is None:
-            raise PpdbError('Breakpoint hit without ppdb initialization')
+        if not self.valid:
+            raise RuntimeError('Breakpoint hit without ppdb initialization')
 
-        # This blocks until user says done. Note this messes with the stack so things get weird after.
+        # This blocks until client says done. Note this messes with the stack so things get weird after.
         # Note - Exceptions in the code under test go to sys.excepthook so try/except is pointless.
         super().set_trace(frame)
 
@@ -89,19 +84,10 @@ class PbotPdb(pdb.Pdb):
         ''' Stopping debugging, clean up resources, exit application. '''
         self.l.info('Server quitting.')
 
-        if self.commif is not None:
-            self.commif.close()
-            self.commif = None
-
-        if self.sock is not None:
-            self.sock.close()
-            self.sock = None
-
         try:
             return super().do_quit(arg)
         except:
-            pass
-            # debug('do_quit() exit')
+            self.l.debug('do_quit() exit')
     do_q = do_quit # alias
 
 
@@ -120,9 +106,18 @@ class CommIf(object):
         self.last_cmd = None
         self.buff = ''
 
-        # Return a file object associated with the socket. https://docs.python.org/3.8/library/socket.html
-        fh = conn.makefile('rw')
+    def __enter__(self):
+        '''For with usage.'''
+        fh = self.conn.makefile('rw')
         self.stream = fh
+        return self  # the 'as' variable
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        '''For with usage.'''
+        self.conn.close()
+        if exc_type is not None:
+            self.l.error(f"An error occurred: {exc_val}", exc_tb)
+        return True  # Returns True to suppress the exception and keep running
 
     def __iter__(self):
         return self.stream.__iter__()
@@ -158,7 +153,7 @@ class CommIf(object):
 
         except Exception as e:
             '''Unexpected error, shut dowwn.'''
-            self.l.error(f'Other exception [{str(e)}]', e)
+            self.l.error(f'Other exception [{str(e)}]', e.__traceback__)
             self.buff = ''
             raise
 
@@ -198,7 +193,7 @@ class CommIf(object):
 
         except Exception as e:
             '''Unexpected error, shut dowwn.'''
-            self.l.error(f'Unexpected exception [{type(e)}]', e)
+            self.l.error(f'Unexpected exception [{type(e)}]', e.__traceback__)
             self.buff = ''
             raise
 
@@ -209,8 +204,6 @@ class CommIf(object):
 
     def close(self):
         '''Override'''
-        self.conn.close()
-        self.conn = None
         self.stream.close()
         self.stream = None
 
@@ -219,9 +212,9 @@ class CommIf(object):
         self.stream.flush()
 
 
-#------------------------------ Starts here -------------------------------------
+#------------------------------Client starts here -------------------------------------
 def breakpoint(port, log_fn=None, use_color=True):
-    '''Opens a remote PDB.'''
+    '''Opens a remote pdb session.'''
     ppdb = PbotPdb(port, log_fn, use_color)
     ppdb.breakpoint(sys._getframe().f_back)
     ppdb.do_quit()

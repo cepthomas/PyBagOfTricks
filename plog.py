@@ -10,7 +10,8 @@ import threading
 
 
 # Options for making bin readable. TODO user config?
-xlat_tbl = { '\0':'NUL', '\n':'LF', '\r':'CR', '\t':'TAB', '\033':'ESC' }
+xlat_tbl = { 0:'NUL', 10:'LF', 13:'CR', 9:'TAB', 27:'ESC' }
+# xlat_tbl = { '\0':'NUL', '\n':'LF', '\r':'CR', '\t':'TAB', '\x1B':'ESC' }
 left_delim = '<' # '|'
 right_delim = '>' #'|'
 
@@ -49,7 +50,7 @@ class Plog:
                 self.f = open(self.log_fn, self.mode)
             except Exception as e:
                 self.stop()
-                self.error(f'Failed to open log file: {self.log_fn}', e)
+                self.error(f'Failed to open log file: {self.log_fn}', e.__traceback__)
 
     #---------------------------- Public Functions ---------------------------------
 
@@ -73,10 +74,10 @@ class Plog:
         self.enabled = enb
 
     #-------------------------------------------------------------------------------
-    def error(self, message, e=None, readable=False):
+    def error(self, message, tb=None, readable=False):
         '''Client logger function.'''
         if self.enabled:
-            tb = None if not e else e.__traceback__
+            tb = None if not tb else tb
             self._write_log('ERR', message, tb=tb, readable=readable)
 
     #-------------------------------------------------------------------------------
@@ -132,7 +133,12 @@ class Plog:
             # Write the main record.
             self.line_cnt += 1
             # _f.write(f'{out_line} {_line_cnt}\n')
-            self.f.write(out_line)
+
+            # If write fails, last chance try coercing.
+            try:
+                self.f.write(out_line)
+            except:
+                self.f.write(self._make_readable(out_line))
             self.f.write('\n')
 
             # traceback?
@@ -158,22 +164,23 @@ class Plog:
     def _make_readable(self, s):
         ''' Make non-printables visible.'''
         buff = []
+        bytes = s.encode("utf-8")
 
-        for ch in s:
-            if ch >= ' ' and ch <= '~': # ascii printable
-                buff.append(ch)
-            elif ch in xlat_tbl:
-                sout = xlat_tbl[ch]
+        for b in bytes:
+            if b >= ord(' ') and b <= ord('~'): # ascii printable
+                buff.append(chr(b))
+            elif b in xlat_tbl:
+                sxlat = xlat_tbl[b]
                 buff.append(left_delim)
-                buff.append(sout)
+                buff.append(sxlat)
                 buff.append(right_delim)
-
             else: # Everything else is binary.
                 buff.append(left_delim)
-                if ch < ' ':
-                    buff.append(f'0x{ord(ch):02X}')
-                else:
-                    buff.append(f'U+{ord(ch):04X}')
+                buff.append(f'0x{b:02X}')
+                # if ch < ' ':
+                #     buff.append(f'0x{ord(ch):02X}')
+                # else:
+                #     buff.append(f'U+{ord(ch):04X}')
                 buff.append(right_delim)
 
         return ''.join(buff) 

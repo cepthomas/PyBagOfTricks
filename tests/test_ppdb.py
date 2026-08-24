@@ -22,11 +22,9 @@ class TestPbotPdb(unittest.TestCase):
     def setUp(self):
         # Logging.
         self.log_fn = h.init_log(h.my_dir(), 'out', 'test_ppdb.log', clean=True)
-        # self.ppdb_log_fn = h.init_log(h.my_dir(), 'out', 'pbot_pdb.log', clean=True)
         self.l = plog.Plog('TEST', self.log_fn)
         self.l.enable(True)
 
-        # self.captured = []
         self.q = queue.Queue()
 
     def tearDown(self):
@@ -35,11 +33,8 @@ class TestPbotPdb(unittest.TestCase):
 
     #------------------------------------------------------------------
     def test_ppdb_tcp(self):
-        '''Tests the .... tcp cmd/resp protocol.'''
-
-        # commif = None
+        '''Tests the tcp cmd/resp protocol.'''
         self.q.empty()
-
         self.l.info('test_ppdb_tcp() enter')
 
         # Run the target code which executes breakpoint() and waits.
@@ -53,13 +48,45 @@ class TestPbotPdb(unittest.TestCase):
             self.l.info('--- target running')
 
             # Send some commands.
-            
+
+
+
+# commands = ['w', 'l', 'n']
+# cind = 0
+# run = True
+# send_next = True # state
+# while run:
+#     try:
+#         if send_next: # ppdb is waiting for next client/user command.
+#             smsg = commands[cind]
+
+# commands = ['w', 'l', 'n']
+# while len(commands) > 0:
+#     try:
+#         scmd = commands.pop(0)
+#         sresp = do_one(scmd)
+#         time.sleep(0.2) # Delay a bit
+#     except (KeyboardInterrupt) as e:
+#         l.info(f'Keyboard => EXIT')
+#         sys.exit(0)
+#     except (Exception) as e:
+#         l.info(f'{type(e)} [{e}] => EXIT')
+#         sys.exit(1)
+#     finally:
+#         l.info(f'finally => EXIT')
+
+
+
+
+
+
+
+
             sresp = self.send_cmd('w')
 
             sresp = self.send_cmd('l')
 
             sresp = self.send_cmd('s')
-
 
         # Exit the debugger.
         sresp4 = self.send_cmd('q')
@@ -76,13 +103,52 @@ class TestPbotPdb(unittest.TestCase):
         self.l.info('exit')
         self.l.stop()
 
-        # if commif is not None:
-        #     commif.close()
-        #     commif = None
+    #------------------------------------------------------------------
+    def send_cmd(self, scmd, timeout=1):
+        '''Send one command and return response string; None if timed out or broken conn; Exception if other.'''
+        self.l.debug(f'CMD [{scmd}]')
+
+        resp = None
+
+        # Connect socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+
+            try:
+                sock.settimeout(timeout)
+                sock.connect((_host, _port))
+                # Didn't raise so connect was successful.
+                self.l.debug('--- Connected to server')
+                with sock.makefile('rw') as commif:
+                    # Send cmd.
+                    commif.write(scmd)
+                    commif.flush()
+                    # Get server response.
+                    sock.settimeout(1) # adjust to taste
+                    sresp = commif.read(8096) # Known to be > max resp
+                    commif.close()
+
+            except TimeoutError:
+                resp = None
+                # self.l.debug(f'--- 210 TimeoutError')
+
+            except ConnectionError as e:
+                resp = None
+                # self.l.debug(f'--- 220 {type(e)} Shouldnt happen')
+                # <class 'ConnectionRefusedError'> [[WinError 10061] No connection could be made because the target machine actively refused it]
+
+            except Exception as e:
+                self.l.debug(f'Other exception [{type(e)}] [{e}]')
+                resp = e
+
+            sock.close()
+
+        self.l.debug(f'RSP [{resp}]')
+        return resp
+
 
     #------------------------------------------------------------------
-    def send_cmd(self, scmd):
-        '''Send one command and return response or None if failed.'''
+    def send_cmd_orig(self, scmd, timeout=1):
+        '''Send one command and return response string or None if fail.'''
 
         sock = None
         commif = None
@@ -96,7 +162,7 @@ class TestPbotPdb(unittest.TestCase):
             sock.settimeout(5)
             sock.connect((_host, _port))
 
-            # Didn't fault so connect was successful.
+            # Didn't raise so connect was successful.
             commif = sock.makefile('rw')
             self.l.info('--- Connected to server')
 
@@ -130,46 +196,12 @@ class TestPbotPdb(unittest.TestCase):
             return sresp
 
     #------------------------------------------------------------------
-    # Read process output stream
     def read_handle(self, out_pipe):
+        '''Read process output stream.'''
 
         for line in iter(out_pipe.readline, b''):
             self.q.put(line) #line.decode())
         #?? out_pipe.close()
-
-    # #------------------------------------------------------------------
-    # def read_handle_s(self, handle):
-    #     ''' Read process output stream'''
-    #     chunk_size = 256
-    #     # chunk_size = 2 ** 13 # 8192
-    #     out = b'' # bytes objects actually behave like immutable sequences of integers
-    #     while not self.killed:
-    #         try:
-    #             # Save the received data.
-    #             data = os.read(handle.fileno(), chunk_size)
-    #             out += data
-    #             # Full buffer read. Go around.
-    #             if len(data) == chunk_size:
-    #                 continue
-    #             # No data received. Standard timeout.
-    #             if data == b'' and out == b'':
-    #                 raise IOError('EOF')
-    #             # Message complete. Save message received.
-    #             smsg = out.decode() # default = utf8 self.encoding)
-    #             # self.captured.append(smsg)
-    #             self.q.put(smsg)
-    #             # Message complete?
-    #             if data == b'':
-    #                 raise IOError('EOF')
-    #             # Not yet.
-    #             out = b''
-    #         except (IOError):
-    #             if self.killed: # ???
-    #                 msg = 'Cancelled'
-    #             else:
-    #                 msg = 'Finished'
-    #             self.q.put(msg)
-    #             break
 
 
 #------------------------------------------------------------------------------
