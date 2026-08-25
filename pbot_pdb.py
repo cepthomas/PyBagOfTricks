@@ -37,7 +37,7 @@ class PbotPdb(pdb.Pdb):
 
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.settimeout(5)  # Seconds.
+                # sock.settimeout(5)  # Seconds.
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
                 sock.bind((self.host, self.port))
                 self.l.info(f'Server started on {self.host}:{self.port} - waiting for connection.')
@@ -54,15 +54,14 @@ class PbotPdb(pdb.Pdb):
                     with CommIf(conn, self.l, self.use_color) as commif:
                         self.l.info(f'Server init commif')
                         # Init base.
-                        super().__init__(stdin=commif, stdout=commif)  # pyright: ignore
-                        # TODO1 super().__init__(stdin=commif, stdout=commif, skip=['unittest.*', 'pbot_pdb.py'])  # pyright: ignore
-                        # TODO1 3.14+ colorize=True  mode=???   lse - enable colorized output in the debugger, if color is supported.
+                        super().__init__(stdin=commif, stdout=commif, skip=['unittest.*', 'pbot_pdb.py'])  # pyright: ignore
+                        # TODO 3.14+ Pdb can color code - see the docs.
                         self.valid = True
                         self.l.info(f'Server init commif done')
 
         except Exception as e:
             # TODO1 Other error handler, considered fatal.
-            self.l.error('Init failed', e.__traceback__)
+            self.l.error(f'Init failed [{e}]', e.__traceback__)
             self.do_quit()
 
     # --------------- Go! ---------------------
@@ -123,7 +122,9 @@ class CommIf(object):
         return self.stream.__iter__()
 
     def _send(self, msg):
+        self.l.debug(f'_send [{msg}]', readable=True)
         self.conn.sendall(msg.encode())
+
 
     # --------------- Required interface ---------------
     # per https://docs.python.org/3/library/io.html#io.TextIOBase
@@ -147,13 +148,13 @@ class CommIf(object):
 
         except (ConnectionError, socket.timeout) as e:
             '''These can happen, ignore.'''
-            self.l.debug(f'Disconnected: {type(e)}')
+            self.l.debug(f'read() Disconnected [{type(e)}]')
             self.buff = ''
             return ''
 
         except Exception as e:
             '''Unexpected error, shut dowwn.'''
-            self.l.error(f'Other exception [{str(e)}]', e.__traceback__)
+            self.l.error(f'read() Other exception [{str(e)}]', e.__traceback__)
             self.buff = ''
             raise
 
@@ -188,12 +189,12 @@ class CommIf(object):
 
         except (ConnectionError, socket.timeout) as e:
             '''These can happen, go back to default state.'''
-            self.l.debug(f'Disconnected [{type(e)}]')
+            self.l.debug(f'write() Disconnected [{type(e)}]')
             self.buff = ''
 
         except Exception as e:
             '''Unexpected error, shut dowwn.'''
-            self.l.error(f'Unexpected exception [{type(e)}]', e.__traceback__)
+            self.l.error(f'write() Unexpected exception [{type(e)}]', e.__traceback__)
             self.buff = ''
             raise
 
