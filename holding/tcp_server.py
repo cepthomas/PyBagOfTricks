@@ -18,8 +18,8 @@ class LineHandler(socketserver.StreamRequestHandler):
         self.data = self.rfile.readline(10000).rstrip()
         ## >>> customize here
         received = self.data.decode('utf-8')
-        print(f'Client sent [{received}]')
-        response = f'You sent [{received}]'
+        print(f'{INFO}Client sent [{received}]{ENDC}')
+        response = f'Yousent [{ERR}{received}{ENDC}]'
         self.wfile.write(response.encode('utf-8'))
 
 # Custom server.

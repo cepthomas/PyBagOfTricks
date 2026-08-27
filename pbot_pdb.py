@@ -1,4 +1,5 @@
 import sys
+import os
 import socket
 import pdb
 import plog
@@ -12,40 +13,33 @@ STACK_LOCATION_COLOR = 96 # cyan
 PROMPT_COLOR = 94 # blue
 ERROR_COLOR = 91 # red
 
-# https://docs.python.org/3.8/library/socket.html
 
 #------------------------------------------------------------------------------
 class PbotPdb(pdb.Pdb):
     '''Custom pdb using TCP.'''
 
     # --------------- Construction ---------------
-    def __init__(self, port, log_fn, use_color=True):
+    def __init__(self, port, log_fn=None, use_color=True):
         '''Construction.'''
         self.host = '127.0.0.1'
         self.port = port
         self.use_color = use_color
         self.valid = False
 
-        # socket.close()
-        # Mark the socket closed. The underlying system resource (e.g. a file descriptor) is also closed when
-        # all file objects from makefile() are closed. Once that happens, all future operations on the socket
-        # object will fail. The remote end will receive no more data (after queued data is flushed).
-        # Sockets are automatically closed when they are garbage-collected, but it is recommended to close() them explicitly,
         self.sock = None
         self.conn = None
         self.commif = None
 
-        # Logging.
+        # Logging. Option to keep log file or open/close per entry.
         self.l = plog.Plog('PPDB', log_fn, keep_open=False)
         self.l.enable(True)
-        self.l.info(f'Starting client on {self.host}:{self.port}')
 
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # self.sock.settimeout(5)  # Seconds.
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
             self.sock.bind((self.host, self.port))
-            self.l.info(f'Server started on {self.host}:{self.port} - waiting for connection.')
+            self.l.debug(f'Server started on {self.host}:{self.port} - waiting for connection.')
 
             # Try to connect. conn is a new socket for R/W.
             self.sock.listen(1)
@@ -53,16 +47,14 @@ class PbotPdb(pdb.Pdb):
 
             # Connected.
             chost, cport = address
-            self.l.info(f'Server accepted connection from {chost}:{cport}')
+            self.l.debug(f'Server accepted connection from {chost}:{cport}')
 
             self.commif = CommIf(self.conn, self.l, self.use_color)
-            self.l.info(f'Server init commif begin')
             # Init base.
             super().__init__(stdin=self.commif, stdout=self.commif)  # pyright: ignore
-            # super().__init__(stdin=commif, stdout=commif, skip=['unittest.*', 'pbot_pdb.py'])  # pyright: ignore
+            # TODO? skip=['unittest.*', 'pbot_pdb.py'])
             # TODO 3.14+ Pdb can color code - see the docs.
             self.valid = True
-            self.l.info(f'Server init commif end')
 
         except Exception as e:
             # Any errors are considered fatal.
@@ -80,13 +72,12 @@ class PbotPdb(pdb.Pdb):
         # Note that exceptions in the code under test go to sys.excepthook so try/except is pointless.
         super().set_trace(frame)
 
-        self.l.debug('breakpoint() exit')
         self.do_quit()
 
     # --------------- Custom user cmds ---------------
     def do_quit(self, arg=None):
         ''' Stopping debugging, clean up resources, exit application. '''
-        self.l.info('Server quitting.')
+        self.l.debug('Server quitting.')
 
         if self.commif is not None:
             self.commif.close()
@@ -104,7 +95,6 @@ class PbotPdb(pdb.Pdb):
             return super().do_quit(arg)
         except Exception as e:
             self.l.error(f'do_quit() failed [{e}]', e.__traceback__)
-            # self.l.debug('do_quit() exit')
     do_q = do_quit # alias
 
 # ---------------------- Socket I/F -------------------------------------
@@ -114,29 +104,15 @@ class CommIf(object):
     Also handles encoding, color, line endings etc.
     Catches exceptions for the purpose of logging only. They are re-raised.
     '''
-# Min:
-# line = self.stdin.readline()
-# self.stdout.write(str(self.intro)+"\n")
-# self.stdout.flush()
-
 
     def __init__(self, conn, logger, use_color):
         self.conn = conn
         self.l = logger
         self.use_color = use_color
-        self.last_cmd = None
         self.buff = ''
-
-        self.l.debug('CommIf __init__ in')
 
         # Return a file object associated with the socket.
         self.stream = self.conn.makefile('rw')
-        # fh = self.conn.makefile('rw')
-        self.l.debug('CommIf __init__ out')
-        # self.stream = fh
-        # self.read = self.stream.read
-        # self.readline = self.stream.readline
-        # self.readlines = self.stream.readlines
 
     def __iter__(self):
         return self.stream.__iter__()
@@ -147,11 +123,12 @@ class CommIf(object):
 
     # --------------- Required interface ---------------
     # per https://docs.python.org/3/library/io.html#io.TextIOBase
+    # Min: readline()  write()  flush()
 
-    # @property
-    # def encoding(self):
-    #     '''Required'''
-    #     return self.stream.encoding
+    @property
+    def encoding(self):
+        '''Required'''
+        return self.stream.encoding
 
     def readline(self, size=1):
         '''Core pdb calls this to read from user/client. Captures the last user command.'''
@@ -159,11 +136,8 @@ class CommIf(object):
         # Reset.
         self.buff = ''
 
-        self.l.debug(f'readline() entry')
-
         try:
             msg = self.stream.readline() # blocks, throws if timeout
-            self.last_cmd = msg
             self.l.debug(f'Received command [{msg}]')
             return msg
 
@@ -198,10 +172,10 @@ class CommIf(object):
                         elif 'Error:' in s: color = ERROR_COLOR
                         elif s.startswith('> '): color = STACK_LOCATION_COLOR
 
-                    self._send(f'{s}' if color is None else f'\033[{color}m{s}\033[0m')
+                    self._send(f'{s}{os.linesep}' if color is None else f'\033[{color}m{s}\033[0m{os.linesep}')
 
                 # Write prompt.
-                self._send(f'\u001b[{PROMPT_COLOR}m(Pdb)\u001b[0m ' if self.use_color else '(Pdb)')
+                self._send(f'\033[{PROMPT_COLOR}m(Pdb)\033[0m' if self.use_color else f'(Pdb)')
 
                 # Reset buffer.
                 self.buff = ''
@@ -233,7 +207,6 @@ class CommIf(object):
     def flush(self):
         '''Override'''
         self.stream.flush()
-
 
 #------------------------------Client starts here -------------------------------------
 def breakpoint(port, log_fn=None, use_color=True):

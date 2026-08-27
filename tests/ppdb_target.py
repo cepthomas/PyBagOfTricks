@@ -12,7 +12,7 @@ target_log_fn = h.init_log(h.my_dir(), 'out', 'target.log', clean=True)
 ppdb_log_fn = h.init_log(h.my_dir(), 'out', 'pbot_pdb.log', clean=True)
 l = plog.Plog('TRGT', target_log_fn, keep_open=False)
 l.enable(True)
-l.info('----- target.py loaded -----')
+# l.info('----- target.py loaded -----')
 
 
 #---------------- Breakpoint test code ----------------------------
@@ -25,7 +25,7 @@ def function2(arg):
 def function1(arg):
     # Set a breakpoint in here then step through and examine the code.
     l.info('function1 set breakpoint')
-    pbot_pdb.breakpoint(59120, log_fn=ppdb_log_fn, use_color=False) # turn off color for unit test
+    pbot_pdb.breakpoint(59120, log_fn=ppdb_log_fn, use_color=True) # turn off color for unit test
     l.info('function1 done breakpoint')
 
     return function2(len(arg))
@@ -40,7 +40,7 @@ def go():
     function1('ABCD')
     l.info('go() exit')
 
-#-----------------------------------------------------------------------------------
+#------------------------------------------------------------------
 def excepthook(type, value, tb):
     '''Process unhandled exceptions.'''
 
@@ -57,12 +57,11 @@ def excepthook(type, value, tb):
         sys.__excepthook__(type, value, tb)
 
 
-#------------------------------------------------------------------------------
+#------------------------------------------------------------------
 if __name__ == '__main__':
     # Connect the last chance hook.
     sys.excepthook = excepthook
 
-    print('>>> target prints hi')
+    print('target says hi local')
     go()
-    print('>>> target prints bye')
     l.stop()

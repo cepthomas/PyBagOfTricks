@@ -15,6 +15,8 @@ import plog
 _host = '127.0.0.1'
 _port = 59120
 
+# TODO1 Fix this test.
+
 
 #-----------------------------------------------------------------------------------
 class TestPbotPdb(unittest.TestCase):
@@ -35,7 +37,6 @@ class TestPbotPdb(unittest.TestCase):
     def test_ppdb_tcp(self):
         '''Tests the tcp cmd/resp protocol.'''
         self.q.empty()
-        self.l.info('test_ppdb_tcp() enter')
 
         # Run the target code which executes breakpoint() and waits.
         fc = os.path.join(h.my_dir(), 'target.py')
@@ -46,7 +47,7 @@ class TestPbotPdb(unittest.TestCase):
             t = threading.Thread(target=self.read_handle, args=(proc.stdout,))
             t.start()
 
-            self.l.debug('--> target process Popen')
+            time.sleep(1)
 
             # Send some commands.
             commands = [None, 'w', 'l', 'n']
@@ -59,7 +60,7 @@ class TestPbotPdb(unittest.TestCase):
                 resp = self.send_cmd(cmd)
                 # t = type(resp)
                 t = resp
-                self.l.debug(f'send_cmd() resp [{resp}] [{t}]')
+                # self.l.debug(f'send_cmd() resp [{resp}] [{t}]')
                 if t is str:
                     # Good response. Save and do next cmd.
                     self.q.put(resp)
@@ -83,12 +84,11 @@ class TestPbotPdb(unittest.TestCase):
         # time.sleep(0.2)
         # proc.kill()
 
-        # Examine generated contents
+        # Examine generated contents.
         while not self.q.empty():
             self.l.debug(f'QUE [{self.q.get()}]', readable=True)
 
         # Stop
-        self.l.info('exit')
         self.l.stop()
 
     #------------------------------------------------------------------
@@ -110,7 +110,6 @@ class TestPbotPdb(unittest.TestCase):
 
                     if cmd is not None:
                         # Send cmd.
-                        self.l.debug(f'--- send [{cmd}]')
                         commif.write(cmd)
                         commif.flush()
                     else:
@@ -118,28 +117,21 @@ class TestPbotPdb(unittest.TestCase):
                         pass
 
                     # Get server response.
-                    self.l.debug(f'--- before read')
                     resp = commif.read(8096) # Known to be > max resp
-                    self.l.debug(f'--- after read [{resp}]')
                     commif.close()
 
             except TimeoutError:
                 resp = None
-                self.l.debug(f'--- 210 TimeoutError')
 
             except ConnectionError as e:
                 resp = None
-                self.l.debug(f'--- 220 {type(e)}')
-                # <class 'ConnectionRefusedError'> [[WinError 10061] No connection could be made because the target machine actively refused it]
 
             except Exception as e:
-                self.l.debug(f'Other exception [{type(e)}] [{e}]')
                 resp = e
 
             finally:
                 sock.close()
 
-        self.l.debug(f'RSP [{resp}]')
         return resp
 
     #------------------------------------------------------------------
