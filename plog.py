@@ -1,8 +1,11 @@
 import sys
 import os
 import datetime
+import shutil
 import traceback
 import threading
+
+import pdb
 
 # Dumb simple logger for python.
 
@@ -20,12 +23,13 @@ class Plog:
     #---------------------------- Lifecycle ----------------------------------------
 
     #-------------------------------------------------------------------------------
-    def __init__(self, name, fn, append=True, max=1000):
+    def __init__(self, name, fn, append=True, keep_open=True, max=50000):
         ''' Start the logger
             - logger name
             - log file name
-            - append or overwrite file
-            - max file lines
+            - append or overwrite new file
+            - keep log file open. Open: 5-10 usec per write, Close: 200-300 usec
+            - max file size
             '''
         self.name = name[0:4].upper()
         self.log_fn = fn
@@ -41,16 +45,24 @@ class Plog:
         # Capture gate.
         self.enabled = False
 
-        # Simple file size mgmt.
-        self.line_cnt = 0
+        # breakpoint()
+        
+        # Maybe roll over log now.
+        if os.path.exists(self.log_fn) and os.path.getsize(self.log_fn) > max:
+            bup = self.log_fn.replace('.log', '_old.log')
+            shutil.copyfile(self.log_fn, bup)
+            # Clear current log file.
+            with open(self.log_fn, 'w'):
+                pass
 
-        # Open file now and keep it open.
-        with self.lock:
-            try:
-                self.f = open(self.log_fn, self.mode)
-            except Exception as e:
-                self.stop()
-                self.error(f'Failed to open log file: {self.log_fn}', e.__traceback__)
+        if keep_open:
+            # Open file now and keep it open.
+            with self.lock:
+                try:
+                    self.f = open(self.log_fn, self.mode, encoding='utf-8')
+                except Exception as e:
+                    self.stop()
+                    self.error(f'Failed to open log file: {self.log_fn}', e.__traceback__)
 
     #---------------------------- Public Functions ---------------------------------
 
@@ -101,7 +113,7 @@ class Plog:
     #-------------------------------------------------------------------------------
     def dump(self):
         '''Diagnostic.'''
-        return f'plog name:{self.name} mode:{self.mode} fn:{self.log_fn} max:{self.max} line_cnt:{self.line_cnt}'
+        return f'plog name:{self.name} mode:{self.mode} fn:{self.log_fn} max:{self.max}'
 
 
     #---------------------------- Private Functions --------------------------------
@@ -109,10 +121,6 @@ class Plog:
     #-------------------------------------------------------------------------------
     def _write_log(self, slevel, message, tb=None, readable=False):
         '''Format a standard message with caller info and log it.'''
-        if self.f is None:
-            self.enabled = False
-            raise RuntimeError('Logger has not been initialized.')
-
         if readable:
             message = self._make_readable(message)
 
@@ -130,35 +138,18 @@ class Plog:
         out_line = f'{sdate} {stime} {slevel} {self.name} {fn}({line}) {message}'
 
         with self.lock:
-            # Write the main record.
-            self.line_cnt += 1
-            # _f.write(f'{out_line} {_line_cnt}\n')
+            flog = self.f or open(self.log_fn, 'a', encoding='utf-8')
 
-            # If write fails, last chance try coercing.
-            try:
-                self.f.write(out_line)
-            except:
-                self.f.write(self._make_readable(out_line))
-            self.f.write('\n')
-
+            flog.write(out_line + '\n')
             # traceback?
             if tb is not None:
                 for tbline in traceback.format_tb(tb):
                     for s in tbline.splitlines():
-                        self.line_cnt += 1
-                        # _f.write(f'{s} {_line_cnt}\n')
-                        self.f.write(s + '\n')
+                        flog.write(s + '\n')
 
-            # Check limit.
-            if self.line_cnt >= self.max:
-                self.f.flush()
-                self.f.close()
-                old_fn = self.log_fn.replace('.log', '_old.log')
-                try: os.remove(old_fn)
-                except: pass
-                os.rename(self.log_fn, old_fn)
-                self.f = open(self.log_fn, self.mode)
-                self.line_cnt = 0
+            if not self.f:
+                flog.flush()
+                flog.close()
 
     #-------------------------------------------------------------------------------
     def _make_readable(self, s):

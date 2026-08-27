@@ -22,7 +22,7 @@ class TestPbotPdb(unittest.TestCase):
     def setUp(self):
         # Logging.
         self.log_fn = h.init_log(h.my_dir(), 'out', 'test_ppdb.log', clean=True)
-        self.l = plog.Plog('TEST', self.log_fn)
+        self.l = plog.Plog('TEST', self.log_fn, keep_open=False)
         self.l.enable(True)
 
         self.q = queue.Queue()
@@ -46,17 +46,17 @@ class TestPbotPdb(unittest.TestCase):
             t = threading.Thread(target=self.read_handle, args=(proc.stdout,))
             t.start()
 
-            self.l.debug('--> target running')
+            self.l.debug('--> target process Popen')
 
             # Send some commands.
-            commands = ['w', 'l', 'n']
+            commands = [None, 'w', 'l', 'n']
             # icmd = 0
             retries = 5
-            scmd = commands.pop(0)
+            cmd = commands.pop(0)
 
             while len(commands) > 0 and retries > 0 and code == 0:
-                self.l.debug(f'send_cmd() {scmd} {len(commands)} {retries}')
-                resp = self.send_cmd(scmd)
+                # self.l.debug(f'send_cmd() {cmd} {len(commands)} {retries}')
+                resp = self.send_cmd(cmd)
                 # t = type(resp)
                 t = resp
                 self.l.debug(f'send_cmd() resp [{resp}] [{t}]')
@@ -64,7 +64,7 @@ class TestPbotPdb(unittest.TestCase):
                     # Good response. Save and do next cmd.
                     self.q.put(resp)
                     if len(commands) > 0:
-                        scmd = commands.pop(0)
+                        cmd = commands.pop(0)
                 elif t is None:
                     # Failed/timeout.
                     retries -= 1
@@ -92,24 +92,31 @@ class TestPbotPdb(unittest.TestCase):
         self.l.stop()
 
     #------------------------------------------------------------------
-    def send_cmd(self, scmd, timeout=1):
+    def send_cmd(self, cmd, timeout=1):
         '''Send one command and return response. Normal is string; None if timed out or broken conn; Exception if error.'''
-        self.l.debug(f'CMD [{scmd}]')
+        self.l.debug(f'CMD [{cmd}]')
 
         resp = None
 
         # Connect socket
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             try:
-                # sock.settimeout(timeout)
+                sock.settimeout(timeout)
                 sock.connect((_host, _port))
-                # Didn't raise so connect was successful.
+                # Connect didn't raise so was successful.
                 self.l.debug('--- Connected to server')
                 with sock.makefile('rw') as commif:
-                    # Send cmd.
-                    self.l.debug(f'--- send [{scmd}]')
-                    commif.write(scmd)
-                    commif.flush()
+                    # time.sleep(1)
+
+                    if cmd is not None:
+                        # Send cmd.
+                        self.l.debug(f'--- send [{cmd}]')
+                        commif.write(cmd)
+                        commif.flush()
+                    else:
+                        # Just get from server
+                        pass
+
                     # Get server response.
                     self.l.debug(f'--- before read')
                     resp = commif.read(8096) # Known to be > max resp
@@ -129,7 +136,8 @@ class TestPbotPdb(unittest.TestCase):
                 self.l.debug(f'Other exception [{type(e)}] [{e}]')
                 resp = e
 
-            sock.close()
+            finally:
+                sock.close()
 
         self.l.debug(f'RSP [{resp}]')
         return resp

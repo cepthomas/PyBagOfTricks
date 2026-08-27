@@ -7,6 +7,7 @@ import helpers as h
 h.add_parent_to_path()
 import plog
 
+import pdb
 
 #-----------------------------------------------------------------------------------
 class TestPlog(unittest.TestCase):
@@ -25,11 +26,18 @@ class TestPlog(unittest.TestCase):
         pass
 
     #----------------------------------------------------------------
-    def test_basic(self):
+    def test_keep_open(self):
         log_fn = h.init_log(h.my_dir(), 'out', 'test_plog_basic.log', clean=True)
         log_fn_old = h.init_log(h.my_dir(), 'out', 'test_plog_basic_old.log', clean=True)
 
-        l = plog.Plog('Log333', log_fn, max=100)
+        # Make a dummy log file.
+        with open(log_fn, 'w') as f:
+            for i in range(110):
+                f.write(f'{i:03d}-----------------------------------------------\n')
+
+        # breakpoint()
+
+        l = plog.Plog('Log333', log_fn, max=5000)
         l.enable(True)
         l.info(f'================= START {l.name} =======================')
 
@@ -47,14 +55,55 @@ class TestPlog(unittest.TestCase):
 
         # Examine generated contents.
         l.stop()
+
         lines = []
         with open(log_fn) as f:
             lines = f.readlines()
-        self.assertEqual(len(lines), 42)
+        self.assertEqual(len(lines), 142)
 
         with open(log_fn_old) as f:
             lines = f.readlines()
-        self.assertEqual(len(lines), 100)
+        self.assertEqual(len(lines), 110)
+
+    #----------------------------------------------------------------
+    def test_close_after(self):
+        log_fn = h.init_log(h.my_dir(), 'out', 'test_plog_basic.log', clean=True)
+        log_fn_old = h.init_log(h.my_dir(), 'out', 'test_plog_basic_old.log', clean=True)
+
+        # Make a dummy log file.
+        with open(log_fn, 'w') as f:
+            for i in range(111):
+                f.write(f'{i:03d}-----------------------------------------------\n')
+
+        # breakpoint()
+
+        l = plog.Plog('Log888', log_fn, max=5000, keep_open=False)
+        l.enable(True)
+        l.info(f'================= START {l.name} =======================')
+
+        for i in range(21):
+            l.info(f'Info message {i}')
+            l.warn(f'Warning message {i}')
+            l.debug(f'Debug message {i}')
+            l.error(f'Error message {i}')
+            try:
+                raise ValueError('I am very bad')
+            except Exception as e:
+                l.error(f'Error message exc {i}', e.__traceback__)
+
+        l.info(f'================= STOP {l.name} =======================')
+
+        # Examine generated contents.
+        l.stop()
+
+        lines = []
+        with open(log_fn) as f:
+            lines = f.readlines()
+        self.assertEqual(len(lines), 149)
+
+        with open(log_fn_old) as f:
+            lines = f.readlines()
+        self.assertEqual(len(lines), 111)
 
     #----------------------------------------------------------------
     def test_overwrite(self):
