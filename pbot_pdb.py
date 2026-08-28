@@ -5,6 +5,11 @@ import pdb
 import plog
 
 
+# https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+
+
+
+
 # ---------------------- Internals ----------------------------------
 
 CURRENT_LINE_COLOR = 93 # yellow
@@ -138,8 +143,14 @@ class CommIf(object):
 
         try:
             msg = self.stream.readline() # blocks, throws if timeout
-            self.l.debug(f'Received command [{msg}]')
-            return msg
+
+            # TODO Check for ansi codes. e.g. up arrow -> <ESC>[A<LF>
+            if len(msg) > 0 and msg[0] == '\0x1B':
+                self.l.debug(f'ANSI [{msg}]', readable=True)
+                return ''
+            else:
+                self.l.debug(f'Received command [{msg}]', readable=True)
+                return msg
 
         except (ConnectionError, socket.timeout) as e:
             '''These can happen, ignore.'''
@@ -155,7 +166,7 @@ class CommIf(object):
 
     def write(self, line):
         '''Core pdb calls this to write to user/client. This adjusts and sends to socket.'''
-        self.l.debug(f'pdb said [{line}]', readable=True)
+        # self.l.debug(f'pdb said [{line}]', readable=True)
 
         try:
             # pdb writes lines piecemeal but we want full proper lines.
