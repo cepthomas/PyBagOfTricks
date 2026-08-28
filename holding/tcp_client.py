@@ -6,25 +6,18 @@ import threading
 import queue
 import datetime
 import traceback
-import pbot_common as com
-com.add_parent_to_path()
+import helpers as h
+h.add_parent_to_path()
 import plog
 
 
-'''
-Generic TCP Client
-- Automatically connects to the server. This means that you can edit/run your code
-  without having to restart the client.
-- Detects unresponsive server by requiring a response for each command sent.
-- Provides some extra system status information, indicated by `!`.
-- Optionally edit the configuration block in this file.
-- Use ctrl-C to exit the client. The server will also stop/unblock.
-'''
+##### Generic TCP Client
+# - Automatically connects to the server. This means that you can edit/run your code
+#   without having to restart the client.
+# - Detects unresponsive server by requiring a response for each command sent.
+# - Provides some extra system status information, indicated by `!`.
+# - Optionally edit the configuration block in this file.
 
-# TODO pass config in from file/cli
-
-# Where to log. None indicates no logging.
-_log_fn = os.path.join(os.path.dirname(__file__), '..', 'log', 'tcp_client.log')
 
 # TCP host.
 _host = '127.0.0.1'
@@ -38,8 +31,11 @@ class GenericTcpClient(object):
 
     def __init__(self):
         '''Construction.'''
-        plog.init('TCPC', _log_fn)
-        plog.enable(True)
+
+        # Where to log. None indicates no logging.
+        log_fn = h.init_log(h.my_dir(), '..', 'log', 'tcp_client.log')
+        self.l = plog.Plog('TCPC', log_fn, keep_open=False)
+        self.l.enable(True)
 
         self.sock = None
         self.commif = None
@@ -56,13 +52,13 @@ class GenericTcpClient(object):
         # Last command time. Non zero implies waiting for a response.
         self.sendts = 0
 
-        plog.debug(f'Constructing client')
+        self.l.debug(f'Constructing client')
 
     def go(self):
         '''Run the main loop.'''
         try:
             s = f'Starting client on {_host}:{_port}'
-            plog.info(s)
+            self.l.info(s)
             self.tell_user(s)
             run = True
 
@@ -90,7 +86,7 @@ class GenericTcpClient(object):
                         # Didn't fault so must be success.
                         self.commif = self.sock.makefile('rw')
                         s = 'Connected to server'
-                        plog.info(s)
+                        self.l.info(s)
                         self.tell_user(s)
 
                     except TimeoutError:
@@ -101,13 +97,13 @@ class GenericTcpClient(object):
                     except ConnectionError as e:
                         # BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError.
                         # Ignore and retry later.
-                        plog.debug(f'ConnectionError: {type(e)}')
+                        self.l.debug(f'ConnectionError: {type(e)}')
                         self.reset()
 
                     except Exception as e:
                         # Other unexpected error.
                         s = f'unexpected'
-                        plog.error(s, e)
+                        self.l.error(s, e)
                         self.tell_user(s)
 
                 ##### Check for server not responding but still connected. #####
@@ -115,7 +111,7 @@ class GenericTcpClient(object):
                     dur = self.get_msec() - self.sendts
                     if dur > self.server_response_time:
                         s = 'Server not listening'
-                        plog.info(s)
+                        self.l.info(s)
                         self.tell_user(s)
                         self.reset()
 
@@ -131,7 +127,7 @@ class GenericTcpClient(object):
                         self.sendts = self.get_msec()
                     else:
                         s = 'Execute command failed - not connected'
-                        plog.info(s)
+                        self.l.info(s)
                         self.tell_user(s)
 
                 ##### Get any server responses. #####
@@ -164,14 +160,14 @@ class GenericTcpClient(object):
 
                     except Exception as e:
                         s = f'wtf'
-                        plog.error(s, e)
+                        self.l.error(s, e)
                         self.tell_user(s)
 
                 ##### If there was no timeout, delay a bit. #####
                 slp = (float(self.loop_time) / 1000.0) if timed_out else 0
                 time.sleep(slp)
 
-            plog.debug('go() run ended')
+            self.l.debug('go() run ended')
 
         except KeyboardInterrupt:
             # Hard shutdown, ignore and quit.
@@ -180,7 +176,7 @@ class GenericTcpClient(object):
         except Exception as e:
             # Other unexpected errors.
             s = f'other'
-            plog.error(s, e)
+            self.l.error(s, e)
             self.tell_user(s)
 
         self.quit(0)

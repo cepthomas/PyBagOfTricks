@@ -2,12 +2,7 @@ import sys
 import os
 import socket
 import pdb
-import plog
-
-
-# https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
-
-
+import plog # TODO remove dependency?
 
 
 # ---------------------- Internals ----------------------------------
@@ -144,7 +139,7 @@ class CommIf(object):
         try:
             msg = self.stream.readline() # blocks, throws if timeout
 
-            # TODO Check for ansi codes. e.g. up arrow -> <ESC>[A<LF>
+            # TODO Check/handle ansi codes. e.g. up/down arrow -> <ESC>[A<LF>
             if len(msg) > 0 and msg[0] == '\0x1B':
                 self.l.debug(f'ANSI [{msg}]', readable=True)
                 return ''

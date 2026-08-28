@@ -10,6 +10,10 @@ import helpers as h
 h.add_parent_to_path()
 import plog
 
+
+##### Dumb test client.
+
+
 _host = '127.0.0.1'
 _port = 59120
 
@@ -19,7 +23,6 @@ l = plog.Plog('SIMC', log_fn)
 l.enable(True)
 l.info(f'Starting client on {_host}:{_port}')
 # for a in sys.argv: l.info(f'arg [{a}]')
-
 
 
 def do_one(scmd):
@@ -91,89 +94,3 @@ while len(commands) > 0:
 
 
 sys.exit(0)
-# if commif is not None: commif.close()
-# if sock is not None: sock.close()
-
-# plog.info(f'RSP [{sresp}]')
-
-# # # Process any capture.
-# # for s in sresp.splitlines():
-# #     plog.info(f'RSP [{s}]')
-
-
-
-# #======================================================
-# retries = 0
-
-# while True:
-#     sock = None
-#     commif = None
-
-#     try:
-#         # Anything to send? TODO? pass as args + port
-#         commands = ['w', 'l', 'n']
-#         while len(commands) > 0:
-#             scmd = commands.pop(0)
-#             plog.info(f'CMD [{scmd}]')
-
-#             # Connect socket
-#             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#             # Block with timeout.
-#             sock.settimeout(5)
-#             sock.connect((_host, _port))
-#             # Didn't fault so must be success.
-#             commif = sock.makefile('rw')
-#             plog.info('Connected to server')
-
-#             commif.write(scmd)
-#             commif.flush()
-#             plog.info(f'--- 100')
-
-#             # Get server response.
-#             sock.settimeout(1) # adjust to taste
-#             plog.info(f'--- 110')
-#             sresp = ''
-#             rcving = True
-#             while rcving:
-#                 try:
-#                     s = commif.read(256)
-#                     plog.info(f'--- 200')
-#                     sresp += s
-#                 except TimeoutError: # Nothing more to read.
-#                     plog.info(f'--- 210')
-#                     rcving = False
-
-#             plog.info(f'RSP [{sresp}]')
-
-#             # # Process any capture.
-#             # for s in sresp.splitlines():
-#             #     plog.info(f'RSP [{s}]')
-
-#             # Delay a bit.
-#             time.sleep(0.1)
-#         run = False
-
-#     except (TimeoutError, ConnectionError) as e:
-#         plog.info(f'{type(e)} [{e}]')
-#         retries += 1
-#         if retries >= 10:
-#             plog.info(f'Too many retries => EXIT')
-#             sys.exit(1)
-#         # else continue
-
-#     # except (OSError) as e:
-#     #     plog.info(f'{type(e)} [{e}]')
-#     #     run = False
-
-#     except (KeyboardInterrupt) as e:
-#         plog.info(f'Keyboard => EXIT')
-#         sys.exit(0)
-
-#     except (Exception) as e:
-#         plog.info(f'{type(e)} [{e}] => EXIT')
-#         sys.exit(2)
-
-#     finally:
-#         plog.info(f'finally => EXIT')
-#         if commif is not None: commif.close()
-#         if sock is not None: sock.close()

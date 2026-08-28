@@ -3,7 +3,7 @@ import os
 import datetime
 import socketserver
 
-# Simple echoing tcp server for test purposes.
+##### Simple echoing tcp server for test purposes.
 
 # Colors
 ERR  = '\u001b[91m'

@@ -10,8 +10,7 @@ import time
 import pbot_pdb
 import plog
 
-
-# Some experiments with using UDP for the remote pdb protocol. Stale - see pbot_pdb.py.
+##### Some experiments with using UDP for the remote pdb protocol. Stale - see pbot_pdb.py.
 
 ### Required
 PORT = -1

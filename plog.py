@@ -7,14 +7,12 @@ import threading
 
 import pdb
 
-# Dumb simple logger for python.
+# Dumb simple logger for python. TODO1 integrate with sbot.
 
-# TODO future: Add trace level (maybe tracer.py). Min level property. Remove warn?
+# TODO1 future: Add trace (maybe tracer.py). Min level property. user config xlat_tbl
 
-
-# Options for making bin readable. TODO user config?
+# Options for making bin readable.
 xlat_tbl = { 0:'NUL', 10:'LF', 13:'CR', 9:'TAB', 27:'ESC' }
-# xlat_tbl = { '\0':'NUL', '\n':'LF', '\r':'CR', '\t':'TAB', '\x1B':'ESC' }
 left_delim = '<' # '|'
 right_delim = '>' #'|'
 

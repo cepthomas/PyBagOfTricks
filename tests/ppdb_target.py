@@ -7,7 +7,6 @@ import pbot_pdb
 
 
 
-
 #---------------- Breakpoint test code ----------------------------
 # Target test code below.
 def function2(arg):
@@ -21,7 +20,7 @@ def function1(arg):
 
     ppdb_log_fn = h.init_log(h.my_dir(), 'out', 'pbot_pdb.log', clean=True)
     pbot_pdb.breakpoint(59120, log_fn=ppdb_log_fn, use_color=True) # turn off color for unit test
-    
+
     print('function1 done breakpoint')
 
     return function2(len(arg))

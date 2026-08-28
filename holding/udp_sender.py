@@ -8,6 +8,7 @@ import pbot_common as com
 com.add_parent_to_path()
 import plog
 
+##### Broadcasts a bunch of strings.
 
 ### config ###
 _log_fn = os.path.join(os.path.dirname(__file__), '..', 'log', 'udp_sender.log')
