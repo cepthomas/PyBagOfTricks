@@ -4,15 +4,8 @@ import bdb
 import helpers as h
 h.add_parent_to_path()
 import pbot_pdb
-import plog
 
 
-# Setup logging.
-target_log_fn = h.init_log(h.my_dir(), 'out', 'target.log', clean=True)
-ppdb_log_fn = h.init_log(h.my_dir(), 'out', 'pbot_pdb.log', clean=True)
-l = plog.Plog('TRGT', target_log_fn, keep_open=False)
-l.enable(True)
-# l.info('----- target.py loaded -----')
 
 
 #---------------- Breakpoint test code ----------------------------
@@ -24,27 +17,30 @@ def function2(arg):
 
 def function1(arg):
     # Set a breakpoint in here then step through and examine the code.
-    l.info('function1 set breakpoint')
+    print('function1 set breakpoint')
+
+    ppdb_log_fn = h.init_log(h.my_dir(), 'out', 'pbot_pdb.log', clean=True)
     pbot_pdb.breakpoint(59120, log_fn=ppdb_log_fn, use_color=True) # turn off color for unit test
-    l.info('function1 done breakpoint')
+    
+    print('function1 done breakpoint')
 
     return function2(len(arg))
 
 def go():
-    l.info('go() enter')
+    print('go() enter')
 
     # Benign reload in case of edited.
     # importlib.reload(pbot_pdb)
 
     # Run some test code.
     function1('ABCD')
-    l.info('go() exit')
+    print('go() exit')
 
 #------------------------------------------------------------------
 def excepthook(type, value, tb):
     '''Process unhandled exceptions.'''
 
-    l.warn(f'excepthook!! type:[{type}] value:[{value}]')
+    print(f'excepthook!! type:[{type}] value:[{value}]')
     # l.error(f'traceback:\n', tb)
 
     # This happens with hard shutdown of SbotPdb.
@@ -62,6 +58,5 @@ if __name__ == '__main__':
     # Connect the last chance hook.
     sys.excepthook = excepthook
 
-    print('target says hi local')
+    print('target says go!')
     go()
-    l.stop()
