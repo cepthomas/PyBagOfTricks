@@ -9,7 +9,7 @@ import pdb
 
 # Dumb simple logger for python. TODO1 integrate with sbot.
 
-# TODO1 future: Add trace (maybe tracer.py). Min level property. user config xlat_tbl
+# TODO future: Add trace (maybe tracer.py). Min level property. user config xlat_tbl
 
 # Options for making bin readable.
 xlat_tbl = { 0:'NUL', 10:'LF', 13:'CR', 9:'TAB', 27:'ESC' }

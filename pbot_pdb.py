@@ -10,8 +10,30 @@ import plog # TODO remove dependency?
 CURRENT_LINE_COLOR = 93 # yellow
 EXCEPTION_LINE_COLOR = 92 # green
 STACK_LOCATION_COLOR = 96 # cyan
-PROMPT_COLOR = 94 # blue
+PROMPT_COLOR = 95 # magenta
 ERROR_COLOR = 91 # red
+
+# Standard colors
+# Color   FG  BG
+# Black   30  40
+# Red     31  41
+# Green   32  42
+# Yellow  33  43
+# Blue    34  44
+# Magenta 35  45
+# Cyan    36  46
+# White   37  47
+# Default 39  49
+
+# Color           FG  BG
+# Bright Black    90  100
+# Bright Red      91  101
+# Bright Green    92  102
+# Bright Yellow   93  103
+# Bright Blue     94  104
+# Bright Magenta  95  105
+# Bright Cyan     96  106
+# Bright White    97  107
 
 
 #------------------------------------------------------------------------------
@@ -207,12 +229,14 @@ class CommIf(object):
 
     def close(self):
         '''Override'''
-        self.stream.close()
-        self.stream = None
+        if self.stream is not None:
+            self.stream.close()
+            self.stream = None
 
     def flush(self):
         '''Override'''
-        self.stream.flush()
+        if self.stream is not None:
+            self.stream.flush()
 
 #------------------------------Client starts here -------------------------------------
 def breakpoint(port, log_fn=None, use_color=True):
