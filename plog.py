@@ -4,12 +4,11 @@ import datetime
 import shutil
 import traceback
 import threading
-
 import pdb
 
-# Dumb simple logger for python. TODO1 integrate with sbot.
+# Dumb simple logger for python.
 
-# TODO future: Add trace (maybe tracer.py). Min level property. user config xlat_tbl
+# TODO ? Add trace (maybe tracer.py). Min level property. User config xlat_tbl.
 
 # Options for making bin readable.
 xlat_tbl = { 0:'NUL', 10:'LF', 13:'CR', 9:'TAB', 27:'ESC' }
@@ -28,7 +27,8 @@ class Plog:
             - append or overwrite new file
             - keep log file open. Open: 5-10 usec per write, Close: 200-300 usec
             - max file size
-            '''
+        '''
+
         self.name = name[0:4].upper()
         self.log_fn = fn
         self.mode = 'a' if append else 'w'

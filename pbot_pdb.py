@@ -2,7 +2,7 @@ import sys
 import os
 import socket
 import pdb
-import plog # TODO remove dependency?
+import plog # TODO remove dependency? Integrate/coexist with sbot (see sbotlog.py).
 
 
 # ---------------------- Internals ----------------------------------
@@ -13,18 +13,6 @@ STACK_LOCATION_COLOR = 96 # cyan
 PROMPT_COLOR = 95 # magenta
 ERROR_COLOR = 91 # red
 
-# Standard colors
-# Color   FG  BG
-# Black   30  40
-# Red     31  41
-# Green   32  42
-# Yellow  33  43
-# Blue    34  44
-# Magenta 35  45
-# Cyan    36  46
-# White   37  47
-# Default 39  49
-
 # Color           FG  BG
 # Bright Black    90  100
 # Bright Red      91  101
@@ -34,6 +22,7 @@ ERROR_COLOR = 91 # red
 # Bright Magenta  95  105
 # Bright Cyan     96  106
 # Bright White    97  107
+# Standard are -60
 
 
 #------------------------------------------------------------------------------
@@ -81,12 +70,25 @@ class PbotPdb(pdb.Pdb):
         except Exception as e:
             # Any errors are considered fatal.
             self.l.error(f'Init failed [{e}]', e.__traceback__)
-            self.do_quit()
+            self._cleanup()
+
+    # --------------- Custom user cmds ---------------
+    def do_quit(self, arg=None):
+        ''' Stopping debugging, clean up resources, exit application. '''
+        self.l.debug('Server quitting.')
+        self._cleanup()
+
+        try:
+            return super().do_quit(arg)
+        except Exception as e:
+            self.l.error(f'do_quit() failed [{e}]', e.__traceback__)
+    do_q = do_quit # alias
 
     # --------------- Go! ---------------------
-    def breakpoint(self, frame):
+    def _set_bp(self, frame):
         ''' Starts the debugger.'''
         self.l.debug('breakpoint() entry')
+        # self.l.debug(f'>>> frame [{frame}]')
         if not self.valid:
             raise RuntimeError('Breakpoint hit without ppdb initialization')
 
@@ -94,12 +96,10 @@ class PbotPdb(pdb.Pdb):
         # Note that exceptions in the code under test go to sys.excepthook so try/except is pointless.
         super().set_trace(frame)
 
-        self.do_quit()
-
-    # --------------- Custom user cmds ---------------
-    def do_quit(self, arg=None):
-        ''' Stopping debugging, clean up resources, exit application. '''
-        self.l.debug('Server quitting.')
+    # ----------------------------------
+    def _cleanup(self):
+        ''' Clean up resources. '''
+        self.l.debug('_cleanup()')
 
         if self.commif is not None:
             self.commif.close()
@@ -113,11 +113,6 @@ class PbotPdb(pdb.Pdb):
             self.conn.close()
             self.conn = None
 
-        try:
-            return super().do_quit(arg)
-        except Exception as e:
-            self.l.error(f'do_quit() failed [{e}]', e.__traceback__)
-    do_q = do_quit # alias
 
 # ---------------------- Socket I/F -------------------------------------
 class CommIf(object):
@@ -160,14 +155,20 @@ class CommIf(object):
 
         try:
             msg = self.stream.readline() # blocks, throws if timeout
+            self.l.debug(f'Received command [{msg}]', readable=True)
+            return msg
 
-            # TODO Check/handle ansi codes. e.g. up/down arrow -> <ESC>[A<LF>
-            if len(msg) > 0 and msg[0] == '\0x1B':
-                self.l.debug(f'ANSI [{msg}]', readable=True)
-                return ''
-            else:
-                self.l.debug(f'Received command [{msg}]', readable=True)
-                return msg
+            # TODO first command has extra junk in msg but not on the wire.
+            # 2026-08-29 11:57:26.949.373 DBG PPDB pbot_pdb.py(162) Received command:
+            # [<0xC3><0xBF><0xC3><0xBB><0x1F><0xC3><0xBF><0xC3><0xBB> <0xC3><0xBF><0xC3><0xBB><0x18><0xC3><0xBF><0xC3><0xBB>'<0xC3><0xBF><0xC3><0xBD><0x01><0xC3><0xBF><0xC3><0xBB><0x03><0xC3><0xBF><0xC3><0xBD><0x03>l<LF>]
+
+            # # TODO Check/handle ansi codes. e.g. up/down arrow -> <ESC>[A<LF>
+            # if len(msg) > 0 and msg[0] == '\0x1B':
+            #     self.l.debug(f'ANSI [{msg}]', readable=True)
+            #     return ''
+            # else:
+            #     self.l.debug(f'Received command [{msg}]', readable=True)
+            #     return msg
 
         except (ConnectionError, socket.timeout) as e:
             '''These can happen, ignore.'''
@@ -242,5 +243,4 @@ class CommIf(object):
 def breakpoint(port, log_fn=None, use_color=True):
     '''Opens a remote pdb session.'''
     ppdb = PbotPdb(port, log_fn, use_color)
-    ppdb.breakpoint(sys._getframe().f_back)
-    ppdb.do_quit()
+    ppdb._set_bp(sys._getframe().f_back)
