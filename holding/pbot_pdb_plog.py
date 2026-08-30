@@ -1,12 +1,11 @@
 import sys
 import os
 import socket
-import traceback
-import datetime
 import pdb
+##### ppdb using plog.
+from plog import Plog
 
-
-# --------------------------- Internals ---------------------------------------
+# ---------------------- Internals ----------------------------------
 
 # Colors - https://gist.github.com/JBlond/2fea43a3049b38287e5e9cefc87b2124
 CURRENT_LINE_COLOR = 93 # yellow
@@ -15,23 +14,9 @@ STACK_LOCATION_COLOR = 96 # cyan
 PROMPT_COLOR = 95 # magenta
 ERROR_COLOR = 91 # red
 
-# Options for making bin readable.
-XLAT_TBL = { 0:'NUL', 10:'LF', 13:'CR', 9:'TAB', 27:'ESC' }
-LEFT_DELIM = '<'
-RIGHT_DELIM = '>'
-
-HOST = '127.0.0.1'
-
-### Logging
-LOG_FN = None
-LOG_NAME = 'PPDB'
-LOG_MODE = 'w' # or 'a''
-def error(message, tb=None, readable=False): _write_log('ERR', message, tb=tb, readable=readable)
-def debug(message, readable=False): _write_log('DBG', message, readable=readable)
-
 
 #------------------------------------------------------------------------------
-class PbotPdb(pdb.Pdb):
+class PbotPdb_plog(pdb.Pdb):
     '''Custom pdb using TCP.'''
 
     # --------------- Construction ---------------
@@ -41,9 +26,7 @@ class PbotPdb(pdb.Pdb):
             - log file name or None if not used
             - optionally colorize pdb output
         '''
-        global LOG_FN
-        LOG_FN = log_fn
-
+        self.host = '127.0.0.1'
         self.port = port
         self.use_color = use_color
         self.valid = False
@@ -52,12 +35,16 @@ class PbotPdb(pdb.Pdb):
         self.conn = None
         self.commif = None
 
+        # Logging. Option to keep log file or open/close per entry.
+        self.l = Plog('PPDB', log_fn, keep_open=False)
+        self.l.enable(True)
+
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # self.sock.settimeout(5)  # Seconds.
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-            self.sock.bind((HOST, self.port))
-            debug(f'Server started on {HOST}:{self.port} - waiting for connection.')
+            self.sock.bind((self.host, self.port))
+            self.l.debug(f'Server started on {self.host}:{self.port} - waiting for connection.')
 
             # Try to connect. conn is a new socket for R/W.
             self.sock.listen(1)
@@ -65,36 +52,36 @@ class PbotPdb(pdb.Pdb):
 
             # Connected.
             chost, cport = address
-            debug(f'Server accepted connection from {chost}:{cport}')
+            self.l.debug(f'Server accepted connection from {chost}:{cport}')
 
-            self.commif = CommIf(self.conn, self.use_color)
+            self.commif = CommIf(self.conn, self.l, self.use_color)
             # Init base.
             super().__init__(stdin=self.commif, stdout=self.commif)  # pyright: ignore
-            # TODO1? skip=['unittest.*', 'pbot_pdb.py'])
+            # ???? skip=['unittest.*', 'pbot_pdb.py'])
             # Note: 3.14+ Pdb can syntax color code - see the docs.
             self.valid = True
 
         except Exception as e:
             # Any errors are considered fatal.
-            error(f'Init failed [{e}]', e.__traceback__)
+            self.l.error(f'Init failed [{e}]', e.__traceback__)
             self._cleanup()
 
     # --------------- Custom user cmds ---------------
     def do_quit(self, arg=None):
         ''' Stopping debugging, clean up resources, exit application. '''
-        debug('Server quitting.')
+        self.l.debug('Server quitting.')
         self._cleanup()
 
         try:
             return super().do_quit(arg)
         except Exception as e:
-            error(f'do_quit() failed [{e}]', e.__traceback__)
+            self.l.error(f'do_quit() failed [{e}]', e.__traceback__)
     do_q = do_quit # alias
 
     # --------------- Go! ---------------------
     def _set_bp(self, frame):
         ''' Starts the debugger.'''
-        debug('breakpoint() entry')
+        self.l.debug('breakpoint() entry')
         if not self.valid:
             raise RuntimeError('Breakpoint hit without ppdb initialization')
 
@@ -105,7 +92,7 @@ class PbotPdb(pdb.Pdb):
     # ----------------------------------
     def _cleanup(self):
         ''' Clean up resources. '''
-        debug('_cleanup()')
+        self.l.debug('_cleanup()')
 
         if self.commif is not None:
             self.commif.close()
@@ -119,7 +106,8 @@ class PbotPdb(pdb.Pdb):
             self.conn.close()
             self.conn = None
 
-# --------------------------- Socket I/F --------------------------------------
+
+# ---------------------- Socket I/F -------------------------------------
 class CommIf(object):
     '''
     Pdb flavored read/write interface to socket. Makes socket look like a file object.
@@ -127,8 +115,9 @@ class CommIf(object):
     Catches exceptions for the purpose of logging only. They are re-raised.
     '''
 
-    def __init__(self, conn, use_color):
+    def __init__(self, conn, logger, use_color):
         self.conn = conn
+        self.l = logger
         self.use_color = use_color
         self.buff = ''
 
@@ -139,7 +128,7 @@ class CommIf(object):
         return self.stream.__iter__()
 
     def _send(self, msg):
-        debug(f'CommIf _send [{msg}]', readable=True)
+        self.l.debug(f'CommIf _send [{msg}]', readable=True)
         self.conn.sendall(msg.encode())
 
     # --------------- Required interface ---------------
@@ -159,10 +148,10 @@ class CommIf(object):
 
         try:
             msg = self.stream.readline() # blocks, throws if timeout
-            debug(f'Received command [{msg}]', readable=True)
+            self.l.debug(f'Received command [{msg}]', readable=True)
             return msg
 
-            # TODO1 first command has extra junk in msg but not on the wire.
+            # ???? first command has extra junk in msg but not on the wire.
             # 2026-08-29 11:57:26.949.373 DBG PPDB pbot_pdb.py(162) Received command:
             # [<0xC3><0xBF><0xC3><0xBB><0x1F><0xC3><0xBF><0xC3><0xBB> <0xC3><0xBF><0xC3><0xBB><0x18><0xC3><0xBF><0xC3><0xBB>'<0xC3><0xBF><0xC3><0xBD><0x01><0xC3><0xBF><0xC3><0xBB><0x03><0xC3><0xBF><0xC3><0xBD><0x03>l<LF>]
 
@@ -176,13 +165,13 @@ class CommIf(object):
 
         except (ConnectionError, socket.timeout) as e:
             '''These can happen, ignore.'''
-            debug(f'read() Disconnected [{type(e)}]')
+            self.l.debug(f'read() Disconnected [{type(e)}]')
             self.buff = ''
             return ''
 
         except Exception as e:
             '''Unexpected error, shut dowwn.'''
-            error(f'read() Other exception [{str(e)}]', e.__traceback__)
+            self.l.error(f'read() Other exception [{str(e)}]', e.__traceback__)
             self.buff = ''
             raise
 
@@ -218,12 +207,12 @@ class CommIf(object):
 
         except (ConnectionError, socket.timeout) as e:
             '''These can happen, go back to default state.'''
-            debug(f'write() Disconnected [{type(e)}]')
+            self.l.debug(f'write() Disconnected [{type(e)}]')
             self.buff = ''
 
         except Exception as e:
             '''Unexpected error, shut dowwn.'''
-            error(f'write() Unexpected exception [{type(e)}]', e.__traceback__)
+            self.l.error(f'write() Unexpected exception [{type(e)}]', e.__traceback__)
             self.buff = ''
             raise
 
@@ -243,50 +232,7 @@ class CommIf(object):
         if self.stream is not None:
             self.stream.flush()
 
-#------------------------------------------------------------------------------
-def _write_log(slevel, message, tb=None, readable=False):
-    '''Format a standard message with caller info and log it.'''
-    if not LOG_FN: return
-
-    if readable:
-        # Make non-printables visible.
-        buff = []
-        bytes = message.encode("utf-8")
-
-        for b in bytes:
-            if b >= ord(' ') and b <= ord('~'): # ascii printable
-                buff.append(chr(b))
-            elif b in XLAT_TBL:
-                sxlat = XLAT_TBL[b]
-                buff.append(LEFT_DELIM)
-                buff.append(sxlat)
-                buff.append(RIGHT_DELIM)
-            else: # Everything else is binary.
-                buff.append(LEFT_DELIM)
-                buff.append(f'0x{b:02X}')
-                buff.append(RIGHT_DELIM)
-        message = ''.join(buff) 
-
-    # Get caller info.
-    frame = sys._getframe(2)
-    fn = os.path.basename(frame.f_code.co_filename)
-    line = frame.f_lineno
-
-    dt = datetime.datetime.now()
-    sdate = f'{dt.year:04d}-{dt.month:02d}-{dt.day:02d}'
-    stime = f'{dt.hour:02d}:{dt.minute:02d}:{dt.second:02d}.{dt.microsecond//1000:03d}.{dt.microsecond%1000:03d}'
-    out_line = f'{sdate} {stime} {slevel} {LOG_NAME} {fn}({line}) {message}'
-
-    with open(LOG_FN, 'a', encoding='utf-8') as flog:
-        flog.write(out_line + '\n')
-        # traceback?
-        if tb is not None:
-            for tbline in traceback.format_tb(tb):
-                for s in tbline.splitlines():
-                    flog.write(s + '\n')
-
-
-#---------------------------- Client starts here ------------------------------
+#------------------------------Client starts here -------------------------------------
 def breakpoint(port, log_fn=None, use_color=True):
     '''Opens a remote pdb session.'''
     ppdb = PbotPdb(port, log_fn, use_color)

@@ -43,7 +43,10 @@ sys.excepthook = excepthook
 
 # Plog
 Dumb simple logger for python. One per client module, threadsafe.
+
 `l = plog.Plog('PPDB', <your-log>, keep_open=False)`
+
+Usage - see [test](https://github.com/cepthomas/PyBagOfTricks/blob/main/tests/ppdb_target.py).
 
 
 # Tracer

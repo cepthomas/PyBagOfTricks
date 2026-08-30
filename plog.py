@@ -41,8 +41,6 @@ class Plog:
         # Capture gate.
         self.enabled = False
 
-        # breakpoint()
-        
         # Maybe roll over log now.
         if os.path.exists(self.log_fn) and os.path.getsize(self.log_fn) > max:
             bup = self.log_fn.replace('.log', '_old.log')
