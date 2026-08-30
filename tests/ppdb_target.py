@@ -3,7 +3,7 @@ import os
 import bdb
 import helpers as h
 h.add_parent_to_path()
-import pbot_pdb
+from pbot_pdb import breakpoint
 
 
 
@@ -19,7 +19,7 @@ def function1(arg):
     print('function1 set breakpoint')
 
     ppdb_log_fn = h.init_log(h.my_dir(), 'out', 'pbot_pdb.log', clean=True)
-    pbot_pdb.breakpoint(59120, log_fn=ppdb_log_fn, use_color=True) # turn off color for unit test
+    breakpoint(59120, log_fn=ppdb_log_fn, use_color=True) # turn off color for unit test
 
     print('function1 done breakpoint')
 

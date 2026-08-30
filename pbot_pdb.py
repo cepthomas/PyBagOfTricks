@@ -2,27 +2,18 @@ import sys
 import os
 import socket
 import pdb
-import plog # TODO remove dependency? Integrate/coexist with sbot (see sbotlog.py).
 
+# import plog # TODO1 remove dependency? Integrate/coexist with sbot (see sbotlog.py).
+from plog import Plog
 
 # ---------------------- Internals ----------------------------------
 
+# Colors - https://gist.github.com/JBlond/2fea43a3049b38287e5e9cefc87b2124
 CURRENT_LINE_COLOR = 93 # yellow
 EXCEPTION_LINE_COLOR = 92 # green
 STACK_LOCATION_COLOR = 96 # cyan
 PROMPT_COLOR = 95 # magenta
 ERROR_COLOR = 91 # red
-
-# Color           FG  BG
-# Bright Black    90  100
-# Bright Red      91  101
-# Bright Green    92  102
-# Bright Yellow   93  103
-# Bright Blue     94  104
-# Bright Magenta  95  105
-# Bright Cyan     96  106
-# Bright White    97  107
-# Standard are -60
 
 
 #------------------------------------------------------------------------------
@@ -31,7 +22,11 @@ class PbotPdb(pdb.Pdb):
 
     # --------------- Construction ---------------
     def __init__(self, port, log_fn=None, use_color=True):
-        '''Construction.'''
+        '''
+            - port number - req
+            - log file name or None if not used
+            - optionally colorize pdb output
+        '''
         self.host = '127.0.0.1'
         self.port = port
         self.use_color = use_color
@@ -42,7 +37,7 @@ class PbotPdb(pdb.Pdb):
         self.commif = None
 
         # Logging. Option to keep log file or open/close per entry.
-        self.l = plog.Plog('PPDB', log_fn, keep_open=False)
+        self.l = Plog('PPDB', log_fn, keep_open=False)
         self.l.enable(True)
 
         try:
@@ -63,8 +58,8 @@ class PbotPdb(pdb.Pdb):
             self.commif = CommIf(self.conn, self.l, self.use_color)
             # Init base.
             super().__init__(stdin=self.commif, stdout=self.commif)  # pyright: ignore
-            # TODO? skip=['unittest.*', 'pbot_pdb.py'])
-            # TODO 3.14+ Pdb can color code - see the docs.
+            # TODO1? skip=['unittest.*', 'pbot_pdb.py'])
+            # Note: 3.14+ Pdb can syntax color code - see the docs.
             self.valid = True
 
         except Exception as e:
@@ -158,11 +153,11 @@ class CommIf(object):
             self.l.debug(f'Received command [{msg}]', readable=True)
             return msg
 
-            # TODO first command has extra junk in msg but not on the wire.
+            # TODO1 first command has extra junk in msg but not on the wire.
             # 2026-08-29 11:57:26.949.373 DBG PPDB pbot_pdb.py(162) Received command:
             # [<0xC3><0xBF><0xC3><0xBB><0x1F><0xC3><0xBF><0xC3><0xBB> <0xC3><0xBF><0xC3><0xBB><0x18><0xC3><0xBF><0xC3><0xBB>'<0xC3><0xBF><0xC3><0xBD><0x01><0xC3><0xBF><0xC3><0xBB><0x03><0xC3><0xBF><0xC3><0xBD><0x03>l<LF>]
 
-            # # TODO Check/handle ansi codes. e.g. up/down arrow -> <ESC>[A<LF>
+            # # TODO Check/handle ansi codes. e.g. up/down/history -> <ESC>[A<LF>
             # if len(msg) > 0 and msg[0] == '\0x1B':
             #     self.l.debug(f'ANSI [{msg}]', readable=True)
             #     return ''

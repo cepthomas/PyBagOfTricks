@@ -16,9 +16,9 @@ Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
 
 1. Copy `pbot_pdb.py` to the directory of the code you are debugging.
 1. Edit the file being debugged [ex](https://github.com/cepthomas/PyBagOfTricks/blob/main/tests/ppdb_target.py).
-    - Add `import pbot_pdb`
-    - Add this at the place you want to break: `pbot_pdb.breakpoint(<port>)`
-    - Other options are: `pbot_pdb.breakpoint(59120, log_fn=<your-log>, use_color=T/F)`
+    - Add `from pbot_pdb import breakpoint`
+    - Add this at the place you want to break: `breakpoint(<port>)`
+    - Other options are: `breakpoint(59120, log_fn=<your-log>, use_color=T/F)`
 1. Run your client of choice.
 1. Run the code being debugged. Client should break at the breakpoint line.
 1. Now you can use any of the standard pdb commands.

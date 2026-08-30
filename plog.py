@@ -8,15 +8,13 @@ import pdb
 
 # Dumb simple logger for python.
 
-# TODO ? Add trace (maybe tracer.py). Min level property. User config xlat_tbl.
-
-# Options for making bin readable.
-xlat_tbl = { 0:'NUL', 10:'LF', 13:'CR', 9:'TAB', 27:'ESC' }
-left_delim = '<' # '|'
-right_delim = '>' #'|'
-
 
 class Plog:
+    # Options for making bin readable. These could be uxer configurable.
+    xlat_tbl = { 0:'NUL', 10:'LF', 13:'CR', 9:'TAB', 27:'ESC' }
+    left_delim = '<' # '|'
+    right_delim = '>' #'|'
+    
     #---------------------------- Lifecycle ----------------------------------------
 
     #-------------------------------------------------------------------------------
@@ -62,6 +60,7 @@ class Plog:
                     self.stop()
                     self.error(f'Failed to open log file: {self.log_fn}', e.__traceback__)
 
+
     #---------------------------- Public Functions ---------------------------------
 
     #-------------------------------------------------------------------------------
@@ -89,12 +88,6 @@ class Plog:
         if self.enabled:
             tb = None if not tb else tb
             self._write_log('ERR', message, tb=tb, readable=readable)
-
-    #-------------------------------------------------------------------------------
-    def warn(self, message):
-        '''Client logger function.'''
-        if self.enabled:
-            self._write_log('WRN', message)
 
     #-------------------------------------------------------------------------------
     def info(self, message):
@@ -158,18 +151,14 @@ class Plog:
         for b in bytes:
             if b >= ord(' ') and b <= ord('~'): # ascii printable
                 buff.append(chr(b))
-            elif b in xlat_tbl:
-                sxlat = xlat_tbl[b]
-                buff.append(left_delim)
+            elif b in self.xlat_tbl:
+                sxlat = self.xlat_tbl[b]
+                buff.append(self.left_delim)
                 buff.append(sxlat)
-                buff.append(right_delim)
+                buff.append(self.right_delim)
             else: # Everything else is binary.
-                buff.append(left_delim)
+                buff.append(self.left_delim)
                 buff.append(f'0x{b:02X}')
-                # if ch < ' ':
-                #     buff.append(f'0x{ord(ch):02X}')
-                # else:
-                #     buff.append(f'U+{ord(ch):04X}')
-                buff.append(right_delim)
+                buff.append(self.right_delim)
 
         return ''.join(buff) 

@@ -83,7 +83,7 @@ class CommIfUdp(object):
 
                     if SEQ_NUM:
                         pass
-                        # TODO strip seq number from front '[99]' and check if it's expected
+                        # ? strip seq number from front '[99]' and check if it's expected
 
                     self._last_cmd = msg
                     return msg

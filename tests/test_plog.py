@@ -43,7 +43,6 @@ class TestPlog(unittest.TestCase):
 
         for i in range(20):
             l.info(f'Info message {i}')
-            l.warn(f'Warning message {i}')
             l.debug(f'Debug message {i}')
             l.error(f'Error message {i}')
             try:
@@ -59,7 +58,7 @@ class TestPlog(unittest.TestCase):
         lines = []
         with open(log_fn) as f:
             lines = f.readlines()
-        self.assertEqual(len(lines), 142)
+        self.assertEqual(len(lines), 122)
 
         with open(log_fn_old) as f:
             lines = f.readlines()
@@ -83,7 +82,6 @@ class TestPlog(unittest.TestCase):
 
         for i in range(21):
             l.info(f'Info message {i}')
-            l.warn(f'Warning message {i}')
             l.debug(f'Debug message {i}')
             l.error(f'Error message {i}')
             try:
@@ -99,7 +97,7 @@ class TestPlog(unittest.TestCase):
         lines = []
         with open(log_fn) as f:
             lines = f.readlines()
-        self.assertEqual(len(lines), 149)
+        self.assertEqual(len(lines), 128)
 
         with open(log_fn_old) as f:
             lines = f.readlines()
@@ -115,8 +113,6 @@ class TestPlog(unittest.TestCase):
         time.sleep(0.123)
         l.info(f'Info message only')
         time.sleep(0.123)
-        l.warn(f'Warning message only')
-        time.sleep(0.123)
         l.debug(f'Debug message only')
         time.sleep(0.123)
 
@@ -127,7 +123,7 @@ class TestPlog(unittest.TestCase):
         lines = []
         with open(log_fn) as f:  # pyright: ignore
             lines = f.readlines()
-        self.assertEqual(len(lines), 5)
+        self.assertEqual(len(lines), 4)
 
     #----------------------------------------------------------------
     def test_readable(self):
