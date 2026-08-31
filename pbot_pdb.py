@@ -21,11 +21,12 @@ LEFT_DELIM = '<'
 RIGHT_DELIM = '>'
 
 HOST = '127.0.0.1'
+TERM = os.linesep # '\n'
 
-### Logging
+# Logging
 LOG_FN = None
 LOG_NAME = 'PPDB'
-LOG_MODE = 'w' # or 'a''
+LOG_MODE = 'w' # or 'a'
 def error(message, tb=None, readable=False): _write_log('ERR', message, tb=tb, readable=readable)
 def debug(message, readable=False): _write_log('DBG', message, readable=readable)
 
@@ -69,9 +70,8 @@ class PbotPdb(pdb.Pdb):
 
             self.commif = CommIf(self.conn, self.use_color)
             # Init base.
-            super().__init__(stdin=self.commif, stdout=self.commif)  # pyright: ignore
-            # TODO1? skip=['unittest.*', 'pbot_pdb.py'])
-            # Note: 3.14+ Pdb can syntax color code - see the docs.
+            super().__init__(stdin=self.commif, stdout=self.commif, skip=['unittest.*', 'pbot_pdb.py'])  # pyright: ignore
+            # 3.14+ Pdb can syntax color code - see the docs.
             self.valid = True
 
         except Exception as e:
@@ -130,9 +130,11 @@ class CommIf(object):
     def __init__(self, conn, use_color):
         self.conn = conn
         self.use_color = use_color
-        self.buff = ''
+        # pdb writes lines piecemeal but we want full proper lines.
+        # Easiest is to accumulate in a buffer until we see the prompt then slice and write.
+        self.write_buff = ''
 
-        # Return a file object associated with the socket.
+        # Return a file object associated with the socket -> https://docs.python.org/3/library/io.html#io.TextIOWrapper
         self.stream = self.conn.makefile('rw')
 
     def __iter__(self):
@@ -143,58 +145,39 @@ class CommIf(object):
         self.conn.sendall(msg.encode())
 
     # --------------- Required interface ---------------
-    # per https://docs.python.org/3/library/io.html#io.TextIOBase
+    #   -> https://docs.python.org/3/library/io.html#io.TextIOBase
     # Min: readline()  write()  flush()
 
     @property
     def encoding(self):
-        '''Required'''
         return self.stream.encoding
 
     def readline(self, size=1):
-        '''Core pdb calls this to read from user/client. Captures the last user command.'''
+        ''' Required. Core pdb calls this to read from user/client. Captures the last user command.'''
         del size
-        # Reset.
-        self.buff = ''
 
         try:
             msg = self.stream.readline() # blocks, throws if timeout
-            debug(f'Received command [{msg}]', readable=True)
+            # TODO first command has extra junk in msg but not on the wire. Tried everything, it's a mystery.
+            # -> [<0xC3><0xBF><0xC3><0xBB><0x1F><0xC3><0xBF><0xC3><0xBB> <0xC3><0xBF><0xC3><0xBB><0x18><0xC3><0xBF><0xC3><0xBB>'<0xC3><0xBF><0xC3><0xBD><0x01><0xC3><0xBF><0xC3><0xBB><0x03><0xC3><0xBF><0xC3><0xBD><0x03>l<LF>]
+            # TODO Handle ansi codes for e.g. up/down/history -> <ESC>[A<LF>
             return msg
 
-            # TODO1 first command has extra junk in msg but not on the wire.
-            # 2026-08-29 11:57:26.949.373 DBG PPDB pbot_pdb.py(162) Received command:
-            # [<0xC3><0xBF><0xC3><0xBB><0x1F><0xC3><0xBF><0xC3><0xBB> <0xC3><0xBF><0xC3><0xBB><0x18><0xC3><0xBF><0xC3><0xBB>'<0xC3><0xBF><0xC3><0xBD><0x01><0xC3><0xBF><0xC3><0xBB><0x03><0xC3><0xBF><0xC3><0xBD><0x03>l<LF>]
-
-            # # TODO Check/handle ansi codes. e.g. up/down/history -> <ESC>[A<LF>
-            # if len(msg) > 0 and msg[0] == '\0x1B':
-            #     self.l.debug(f'ANSI [{msg}]', readable=True)
-            #     return ''
-            # else:
-            #     self.l.debug(f'Received command [{msg}]', readable=True)
-            #     return msg
-
         except (ConnectionError, socket.timeout) as e:
-            '''These can happen, ignore.'''
+            ''' These can happen, ignore. '''
             debug(f'read() Disconnected [{type(e)}]')
-            self.buff = ''
             return ''
 
         except Exception as e:
-            '''Unexpected error, shut dowwn.'''
+            ''' Unexpected error, shut dowwn. '''
             error(f'read() Other exception [{str(e)}]', e.__traceback__)
-            self.buff = ''
             raise
 
     def write(self, line):
-        '''Core pdb calls this to write to user/client. This adjusts and sends to socket.'''
-        # self.l.debug(f'pdb said [{line}]', readable=True)
-
+        ''' Required. Core pdb calls this to write to user/client. This adjusts and sends to socket. '''
         try:
-            # pdb writes lines piecemeal but we want full proper lines.
-            # Easiest is to accumulate in a buffer until we see the prompt then slice and write.
             if '(Pdb)' in line:
-                for s in self.buff.splitlines():
+                for s in self.write_buff.splitlines():
                     color = None
 
                     if self.use_color:
@@ -204,27 +187,26 @@ class CommIf(object):
                         elif '***' in s: color = ERROR_COLOR
                         elif 'Error:' in s: color = ERROR_COLOR
                         elif s.startswith('> '): color = STACK_LOCATION_COLOR
-
-                    self._send(f'{s}{os.linesep}' if color is None else f'\033[{color}m{s}\033[0m{os.linesep}')
+                    self._send(f'{s}{TERM}' if color is None else f'\033[{color}m{s}\033[0m{TERM}')
 
                 # Write prompt.
                 self._send(f'\033[{PROMPT_COLOR}m(Pdb)\033[0m' if self.use_color else f'(Pdb)')
 
                 # Reset buffer.
-                self.buff = ''
+                self.write_buff = ''
             else:
                 # Just collect.
-                self.buff += line
+                self.write_buff += line
 
         except (ConnectionError, socket.timeout) as e:
             '''These can happen, go back to default state.'''
             debug(f'write() Disconnected [{type(e)}]')
-            self.buff = ''
+            self.write_buff = ''
 
         except Exception as e:
             '''Unexpected error, shut dowwn.'''
             error(f'write() Unexpected exception [{type(e)}]', e.__traceback__)
-            self.buff = ''
+            self.write_buff = ''
             raise
 
     def writelines(self, lines):
@@ -277,7 +259,7 @@ def _write_log(slevel, message, tb=None, readable=False):
     stime = f'{dt.hour:02d}:{dt.minute:02d}:{dt.second:02d}.{dt.microsecond//1000:03d}.{dt.microsecond%1000:03d}'
     out_line = f'{sdate} {stime} {slevel} {LOG_NAME} {fn}({line}) {message}'
 
-    with open(LOG_FN, 'a', encoding='utf-8') as flog:
+    with open(LOG_FN, LOG_MODE, encoding='utf-8') as flog:
         flog.write(out_line + '\n')
         # traceback?
         if tb is not None:

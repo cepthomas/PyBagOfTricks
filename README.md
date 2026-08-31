@@ -19,7 +19,7 @@ Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
     - Add `from pbot_pdb import breakpoint`
     - Add this at the place you want to break: `breakpoint(<port>)`
     - Other options are: `breakpoint(59120, log_fn=<your-log>, use_color=T/F)`
-1. Run your client of choice.
+1. Run your client of choice - best to do this first.
 1. Run the code being debugged. Client should break at the breakpoint line.
 1. Now you can use any of the standard pdb commands.
 
@@ -40,6 +40,9 @@ def excepthook(type, value, tb):
 # Connect the last chance hook.
 sys.excepthook = excepthook
 ```
+
+Currently there is an issue where the first user command fails but every subsequent works correctly.
+Unknown reason, doesn't affect general operation.
 
 # Plog
 Dumb simple logger for python. One per client module, threadsafe.
