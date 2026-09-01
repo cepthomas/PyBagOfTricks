@@ -3,6 +3,7 @@ import os
 import socket
 import traceback
 import datetime
+import shutil
 import pdb
 
 
@@ -26,7 +27,8 @@ TERM = os.linesep # '\n'
 # Logging
 LOG_FN = None
 LOG_NAME = 'PPDB'
-LOG_MODE = 'w' # or 'a'
+LOG_SIZE = 50000
+LOG_OVERWRITE = True # else append
 def error(message, tb=None, readable=False): _write_log('ERR', message, tb=tb, readable=readable)
 def debug(message, readable=False): _write_log('DBG', message, readable=readable)
 
@@ -52,6 +54,14 @@ class PbotPdb(pdb.Pdb):
         self.sock = None
         self.conn = None
         self.commif = None
+
+        # Maybe roll over log now.
+        if LOG_FN and os.path.exists(LOG_FN) and os.path.getsize(LOG_FN) > LOG_SIZE:
+            bup = LOG_FN.replace('.log', '_old.log')
+            shutil.copyfile(LOG_FN, bup)
+            # Clear current log file.
+            with open(LOG_FN, 'w'):
+                pass
 
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -259,7 +269,7 @@ def _write_log(slevel, message, tb=None, readable=False):
     stime = f'{dt.hour:02d}:{dt.minute:02d}:{dt.second:02d}.{dt.microsecond//1000:03d}.{dt.microsecond%1000:03d}'
     out_line = f'{sdate} {stime} {slevel} {LOG_NAME} {fn}({line}) {message}'
 
-    with open(LOG_FN, LOG_MODE, encoding='utf-8') as flog:
+    with open(LOG_FN, 'a', encoding='utf-8') as flog:
         flog.write(out_line + '\n')
         # traceback?
         if tb is not None:
