@@ -3,7 +3,6 @@ import os
 import socket
 import traceback
 import datetime
-import shutil
 import pdb
 
 
@@ -28,7 +27,7 @@ TERM = os.linesep # '\n'
 LOG_FN = None
 LOG_NAME = 'PPDB'
 LOG_SIZE = 50000
-LOG_OVERWRITE = True # else append
+LOG_OVERWRITE = True # create new file else append
 def error(message, tb=None, readable=False): _write_log('ERR', message, tb=tb, readable=readable)
 def debug(message, readable=False): _write_log('DBG', message, readable=readable)
 
@@ -57,13 +56,11 @@ class PbotPdb(pdb.Pdb):
 
         # Maybe roll over log now.
         if LOG_FN and os.path.exists(LOG_FN) and os.path.getsize(LOG_FN) > LOG_SIZE:
-            bup = LOG_FN.replace('.log', '_old.log')
-            shutil.copyfile(LOG_FN, bup)
-            # Clear current log file.
-            with open(LOG_FN, 'w'):
-                pass
+            os.replace(LOG_FN, LOG_FN.replace('.log', '_old.log'))
 
         try:
+            debug(f'Hello [{os.system}] [{sys.platform}].')
+
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # self.sock.settimeout(5)  # Seconds.
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
@@ -145,7 +142,7 @@ class CommIf(object):
         self.write_buff = ''
 
         # Return a file object associated with the socket -> https://docs.python.org/3/library/io.html#io.TextIOWrapper
-        self.stream = self.conn.makefile('rw')
+        self.stream = self.conn.makefile('rw') #, encoding='utf-8')
 
     def __iter__(self):
         return self.stream.__iter__()
@@ -168,19 +165,20 @@ class CommIf(object):
 
         try:
             msg = self.stream.readline() # blocks, throws if timeout
-            # TODO first command has extra junk in msg but not on the wire. Tried everything, it's a mystery.
-            # -> [<0xC3><0xBF><0xC3><0xBB><0x1F><0xC3><0xBF><0xC3><0xBB> <0xC3><0xBF><0xC3><0xBB><0x18><0xC3><0xBF><0xC3><0xBB>'<0xC3><0xBF><0xC3><0xBD><0x01><0xC3><0xBF><0xC3><0xBB><0x03><0xC3><0xBF><0xC3><0xBD><0x03>l<LF>]
-            # TODO Handle ansi codes for e.g. up/down/history -> <ESC>[A<LF>
+            debug(f'Received command [{msg}]', readable=True)
             return msg
+            # TODO first command has extra junk in msg but not on the wire. Something to do with encoding I think.
+            #  -> [<0xC3><0xBF><0xC3><0xBB><0x1F><0xC3><0xBF><0xC3><0xBB> <0xC3><0xBF><0xC3><0xBB><0x18><0xC3><0xBF><0xC3><0xBB>'<0xC3><0xBF><0xC3><0xBD><0x01><0xC3><0xBF><0xC3><0xBB><0x03><0xC3><0xBF><0xC3><0xBD><0x03>l<LF>]
+            # TODO Handle ansi codes for e.g. up/down/history -> <ESC>[A<LF>
 
         except (ConnectionError, socket.timeout) as e:
             ''' These can happen, ignore. '''
-            debug(f'read() Disconnected [{type(e)}]')
+            debug(f'readline() Disconnected [{type(e)}]')
             return ''
 
         except Exception as e:
             ''' Unexpected error, shut dowwn. '''
-            error(f'read() Other exception [{str(e)}]', e.__traceback__)
+            error(f'readline() Other exception [{str(e)}]', e.__traceback__)
             raise
 
     def write(self, line):
@@ -243,7 +241,8 @@ def _write_log(slevel, message, tb=None, readable=False):
     if readable:
         # Make non-printables visible.
         buff = []
-        bytes = message.encode("utf-8")
+        bytes = message.encode()
+        # bytes = message.encode("utf-8")
 
         for b in bytes:
             if b >= ord(' ') and b <= ord('~'): # ascii printable
@@ -269,7 +268,8 @@ def _write_log(slevel, message, tb=None, readable=False):
     stime = f'{dt.hour:02d}:{dt.minute:02d}:{dt.second:02d}.{dt.microsecond//1000:03d}.{dt.microsecond%1000:03d}'
     out_line = f'{sdate} {stime} {slevel} {LOG_NAME} {fn}({line}) {message}'
 
-    with open(LOG_FN, 'a', encoding='utf-8') as flog:
+    # with open(LOG_FN, 'a', encoding='utf-8') as flog:
+    with open(LOG_FN, 'a') as flog:
         flog.write(out_line + '\n')
         # traceback?
         if tb is not None:

@@ -14,30 +14,22 @@ class TestPlog(unittest.TestCase):
 
     def setUp(self):
         pass
-        # self.log_fn = h.init_log(h.my_dir(), 'out', 'test_plog.log', clean=True)
-        # self.log_fn_old = h.init_log(h.my_dir(), 'out', 'test_plog_old.log', clean=True)
-
-        # try: os.remove(self.log_fn)
-        # except: pass
-        # try: os.remove(self.log_fn_old)
-        # except: pass
 
     def tearDown(self):
         pass
 
     #----------------------------------------------------------------
-    def test_keep_open(self):
-        log_fn = h.init_log(h.my_dir(), 'out', 'test_plog_basic.log', clean=True)
-        log_fn_old = h.init_log(h.my_dir(), 'out', 'test_plog_basic_old.log', clean=True)
+    def test_basic_keep_open(self):
+        log_fn = h.init_log(h.my_dir(), 'out', 'test_basic_keep_open.log', clean=True)
+        log_fn_old = h.init_log(h.my_dir(), 'out', 'test_basic_keep_open_old.log', clean=True)
 
-        # Make a dummy log file.
+        # Make a dummy full log file.
         with open(log_fn, 'w') as f:
             for i in range(110):
                 f.write(f'{i:03d}-----------------------------------------------\n')
 
-        # breakpoint()
-
-        l = plog.Plog('Log333', log_fn, max=5000)
+        # The new log file.
+        l = plog.Plog('Log333', log_fn, max=5000, keep_open=True)
         l.enable(True)
         l.info(f'================= START {l.name} =======================')
 
@@ -66,15 +58,7 @@ class TestPlog(unittest.TestCase):
 
     #----------------------------------------------------------------
     def test_close_after(self):
-        log_fn = h.init_log(h.my_dir(), 'out', 'test_plog_basic.log', clean=True)
-        log_fn_old = h.init_log(h.my_dir(), 'out', 'test_plog_basic_old.log', clean=True)
-
-        # Make a dummy log file.
-        with open(log_fn, 'w') as f:
-            for i in range(111):
-                f.write(f'{i:03d}-----------------------------------------------\n')
-
-        # breakpoint()
+        log_fn = h.init_log(h.my_dir(), 'out', 'test_close_after.log', clean=True)
 
         l = plog.Plog('Log888', log_fn, max=5000, keep_open=False)
         l.enable(True)
@@ -99,13 +83,9 @@ class TestPlog(unittest.TestCase):
             lines = f.readlines()
         self.assertEqual(len(lines), 128)
 
-        with open(log_fn_old) as f:
-            lines = f.readlines()
-        self.assertEqual(len(lines), 111)
-
     #----------------------------------------------------------------
     def test_overwrite(self):
-        log_fn = h.init_log(h.my_dir(), 'out', 'test_plog_overwrite.log', clean=True)
+        log_fn = h.init_log(h.my_dir(), 'out', 'test_overwrite.log', clean=True)
         l = plog.Plog('Log444', log_fn, append=False)
         l.enable(True)
         l.info(f'================= START {l.name} =======================')
@@ -127,7 +107,7 @@ class TestPlog(unittest.TestCase):
 
     #----------------------------------------------------------------
     def test_readable(self):
-        log_fn = h.init_log(h.my_dir(), 'out', 'test_plog_readable.log', clean=True)
+        log_fn = h.init_log(h.my_dir(), 'out', 'test_readable.log', clean=True)
         l = plog.Plog('Log555', log_fn)
         l.enable(True)
         l.info(f'================= START {l.name} =======================')
@@ -142,29 +122,27 @@ class TestPlog(unittest.TestCase):
         l.debug('With UC readable=False [♥]', readable=False)
         l.debug('With UC readable=True [🔥]', readable=True)
         l.debug('With UC readable=False [😀]', readable=False)
+        # l.debug('With UC readable=False [😀]', readable=True)
 
         l.info(f'================= STOP {l.name} =======================')
 
         # Examine generated contents.
         l.stop()
         lines = []
-        with open(log_fn) as f:  # pyright: ignore
+        with open(log_fn, encoding='utf-8') as f:  # pyright: ignore
             lines = f.readlines()
-        # LOG5 test_plog.py(85) ================= START LOG5 =======================
-        # LOG5 test_plog.py(123) Plain line
-        # LOG5 test_plog.py(124) Plain line
-        # LOG5 test_plog.py(125) With NL readable=True [<LF>]
-        # LOG5 test_plog.py(126) With TAB readable=True [<TAB>]
-        # LOG5 test_plog.py(127) With TAB readable=False [    ]
-        # LOG5 test_plog.py(128) With ESC readable=True [<ESC>]
-        # LOG5 test_plog.py(129) With UC readable=True [<0xE2><0x99><0xA5>]
-        # LOG5 test_plog.py(130) With UC readable=False [<0xE2><0x99><0xA5>]
-        # LOG5 test_plog.py(131) With UC readable=True [<0xF0><0x9F><0x94><0xA5>]
-        # LOG5 test_plog.py(132) With UC readable=False [<0xF0><0x9F><0x98><0x80>]
-        # LOG5 test_plog.py(148) ================= STOP LOG5 =======================
-
-        self.assertEqual(len(lines), 12)
-        pass
+            self.assertEqual(len(lines), 12)
+            self.assertTrue('With TAB readable=True [<TAB>]' in lines[4])
+            self.assertTrue('With UC readable=True [<0xE2><0x99><0xA5>]' in lines[7])
+            # When piping terminal output or executing Python in certain environments, Python may default
+            # to an encoding that cannot handle special characters (like emojis or non-English alphabets),
+            # leading to errors. Force the standard output to use UTF-8. My default is cp1252 (win ansi).
+            print('stdout current:', sys.stdout.encoding)
+            sys.stdout.reconfigure(encoding='utf-8')  # pyright: ignore
+            self.assertTrue(R'With UC readable=False [😀]' in lines[10]) #TODO this doesn't work???
+            # logged = lines[10][55:]
+            # ref = 'With UC readable=False [😀]\n'
+            # self.assertEqual(logged, ref)
 
 #------------------------------------------------------------------------------
 if __name__ == '__main__':

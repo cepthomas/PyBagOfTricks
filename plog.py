@@ -1,10 +1,8 @@
 import sys
 import os
 import datetime
-import shutil
 import traceback
 import threading
-import pdb
 
 # Dumb simple logger for python.
 
@@ -43,11 +41,12 @@ class Plog:
 
         # Maybe roll over log now.
         if os.path.exists(self.log_fn) and os.path.getsize(self.log_fn) > max:
-            bup = self.log_fn.replace('.log', '_old.log')
-            shutil.copyfile(self.log_fn, bup)
-            # Clear current log file.
-            with open(self.log_fn, 'w'):
-                pass
+            os.replace(self.log_fn, self.log_fn.replace('.log', '_old.log'))
+            # bup = self.log_fn.replace('.log', '_old.log')
+            # shutil.copyfile(self.log_fn, bup)
+            # # Clear current log file.
+            # with open(self.log_fn, 'w'):
+            #     pass
 
         if keep_open:
             # Open file now and keep it open.

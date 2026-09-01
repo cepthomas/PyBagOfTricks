@@ -6,9 +6,9 @@ import threading
 import queue
 import datetime
 import traceback
-import helpers as h
-h.add_parent_to_path()
-import plog
+# import helpers as h
+# h.add_parent_to_path()
+# import plog
 
 
 ##### Generic TCP Client
@@ -33,9 +33,9 @@ class GenericTcpClient(object):
         '''Construction.'''
 
         # Where to log. None indicates no logging.
-        log_fn = h.init_log(h.my_dir(), '..', 'log', 'tcp_client.log')
-        self.l = plog.Plog('TCPC', log_fn, keep_open=False)
-        self.l.enable(True)
+        # log_fn = h.init_log(h.my_dir(), '..', 'log', 'tcp_client.log')
+        # self.l = plog.Plog('TCPC', log_fn, keep_open=False)
+        # self.l.enable(True)
 
         self.sock = None
         self.commif = None
@@ -52,13 +52,13 @@ class GenericTcpClient(object):
         # Last command time. Non zero implies waiting for a response.
         self.sendts = 0
 
-        self.l.debug(f'Constructing client')
+        # self.l.debug(f'Constructing client')
 
     def go(self):
         '''Run the main loop.'''
         try:
             s = f'Starting client on {_host}:{_port}'
-            self.l.info(s)
+            # self.l.info(s)
             self.tell_user(s)
             run = True
 
@@ -86,7 +86,7 @@ class GenericTcpClient(object):
                         # Didn't fault so must be success.
                         self.commif = self.sock.makefile('rw')
                         s = 'Connected to server'
-                        self.l.info(s)
+                        # self.l.info(s)
                         self.tell_user(s)
 
                     except TimeoutError:
@@ -97,13 +97,13 @@ class GenericTcpClient(object):
                     except ConnectionError as e:
                         # BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError.
                         # Ignore and retry later.
-                        self.l.debug(f'ConnectionError: {type(e)}')
+                        # self.l.debug(f'ConnectionError: {type(e)}')
                         self.reset()
 
                     except Exception as e:
                         # Other unexpected error.
                         s = f'unexpected'
-                        self.l.error(s, e)
+                        # self.l.error(s, e)
                         self.tell_user(s)
 
                 ##### Check for server not responding but still connected. #####
@@ -111,7 +111,7 @@ class GenericTcpClient(object):
                     dur = self.get_msec() - self.sendts
                     if dur > self.server_response_time:
                         s = 'Server not listening'
-                        self.l.info(s)
+                        # self.l.info(s)
                         self.tell_user(s)
                         self.reset()
 
@@ -127,7 +127,7 @@ class GenericTcpClient(object):
                         self.sendts = self.get_msec()
                     else:
                         s = 'Execute command failed - not connected'
-                        self.l.info(s)
+                        # self.l.info(s)
                         self.tell_user(s)
 
                 ##### Get any server responses. #####
@@ -160,14 +160,14 @@ class GenericTcpClient(object):
 
                     except Exception as e:
                         s = f'wtf'
-                        self.l.error(s, e)
+                        # self.l.error(s, e)
                         self.tell_user(s)
 
                 ##### If there was no timeout, delay a bit. #####
                 slp = (float(self.loop_time) / 1000.0) if timed_out else 0
                 time.sleep(slp)
 
-            self.l.debug('go() run ended')
+            # self.l.debug('go() run ended')
 
         except KeyboardInterrupt:
             # Hard shutdown, ignore and quit.
@@ -176,7 +176,7 @@ class GenericTcpClient(object):
         except Exception as e:
             # Other unexpected errors.
             s = f'other'
-            self.l.error(s, e)
+            # self.l.error(s, e)
             self.tell_user(s)
 
         self.quit(0)

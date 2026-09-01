@@ -42,7 +42,6 @@ sys.excepthook = excepthook
 ```
 
 Currently there is an issue where the first user command fails but every subsequent works correctly.
-Unknown reason, doesn't affect general operation.
 
 # Plog
 Dumb simple logger for python. One per client module, threadsafe.
