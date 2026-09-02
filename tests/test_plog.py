@@ -139,10 +139,7 @@ class TestPlog(unittest.TestCase):
             # leading to errors. Force the standard output to use UTF-8. My default is cp1252 (win ansi).
             print('stdout current:', sys.stdout.encoding)
             sys.stdout.reconfigure(encoding='utf-8')  # pyright: ignore
-            self.assertTrue(R'With UC readable=False [😀]' in lines[10]) #TODO this doesn't work???
-            # logged = lines[10][55:]
-            # ref = 'With UC readable=False [😀]\n'
-            # self.assertEqual(logged, ref)
+            self.assertTrue(R'With UC readable=False [😀]' in lines[10])
 
 #------------------------------------------------------------------------------
 if __name__ == '__main__':

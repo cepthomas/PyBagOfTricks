@@ -160,15 +160,11 @@ class CommIf(object):
         return self.stream.encoding
 
     def readline(self, size=1):
-        ''' Required. Core pdb calls this to read from user/client. Captures the last user command.'''
-        del size
-
+        ''' Required. Core pdb calls this to read from user/client.'''
         try:
             msg = self.stream.readline() # blocks, throws if timeout
             debug(f'Received command [{msg}]', readable=True)
             return msg
-            # TODO first command has extra junk in msg but not on the wire. Something to do with encoding I think.
-            #  -> [<0xC3><0xBF><0xC3><0xBB><0x1F><0xC3><0xBF><0xC3><0xBB> <0xC3><0xBF><0xC3><0xBB><0x18><0xC3><0xBF><0xC3><0xBB>'<0xC3><0xBF><0xC3><0xBD><0x01><0xC3><0xBF><0xC3><0xBB><0x03><0xC3><0xBF><0xC3><0xBD><0x03>l<LF>]
             # TODO Handle ansi codes for e.g. up/down/history -> <ESC>[A<LF>
 
         except (ConnectionError, socket.timeout) as e:

@@ -7,8 +7,8 @@ Python odds and ends, mainly for debugging (esp. Sublime Text plugins).
 - Component for debugging python remotely over a TCP connection.
 - Initially built to debug Sublime Text plugins but is actually generally useful standalone.
 - Built for ST4 on Windows. Linux and OSX should be ok but are minimally tested.
-- Uses generic telnet client - linux terminal, windows telnet/putty, etc.
-- Option for colorizing of output. Totally unnecessary but cute. (note - doesn't work with windows telnet).
+- Uses generic text client - linux terminal, windows putty/kitty, etc.
+- Option for colorizing of output. Totally unnecessary but cute. Windows telnet doesn't support color.
 
 ![Plugin Pdb](cli1.png)
 
@@ -41,7 +41,8 @@ def excepthook(type, value, tb):
 sys.excepthook = excepthook
 ```
 
-Currently there is an issue where the first user command fails but every subsequent works correctly.
+Cursor arrow keys don't work, needs some dev work.
+
 
 # Plog
 Dumb simple logger for python. One per client module, threadsafe.
