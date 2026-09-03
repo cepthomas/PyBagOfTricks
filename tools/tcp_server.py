@@ -5,6 +5,11 @@ import socketserver
 
 ##### Simple echoing tcp server for test purposes.
 
+# Configure. Edit for specific test scenarios.
+HOST = 'localhost'  # '127.0.0.1'
+PORT = 59120
+MAX_MSG = 10000
+
 # Colors
 ERR  = '\u001b[91m'
 INFO = '\u001b[96m'
@@ -15,7 +20,7 @@ ENDC = '\u001b[0m'
 # Uses file-like object - rfile and wfile. Socket will be auto closed.
 class LineHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        self.data = self.rfile.readline(10000).rstrip()
+        self.data = self.rfile.readline(MAX_MSG).rstrip()
         ## >>> customize here
         received = self.data.decode('utf-8')
         print(f'{INFO}Client sent [{received}]{ENDC}')
@@ -35,7 +40,7 @@ class MyServer(socketserver.TCPServer):
         print(f'server_close()')
 
 # Run the server.
-with MyServer(('127.0.0.1', 59120), LineHandler) as server:
+with MyServer((HOST, PORT), LineHandler) as server:
     # print(f'Server start')
     try:
         server.serve_forever() # polls at 0.5 sec. timeout not used.
