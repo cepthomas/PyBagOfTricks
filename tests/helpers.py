@@ -1,7 +1,7 @@
 import sys
 import os
 
-# Handy test helpers.
+# Handy test helpers. TODO1 need to create the 'out' dir.'
 
 # Add file location to python path.
 def add_parent_to_path():
