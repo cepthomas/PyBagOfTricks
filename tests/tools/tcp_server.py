@@ -29,7 +29,7 @@ class LineHandler(socketserver.StreamRequestHandler):
 
 # Custom server.
 class MyServer(socketserver.TCPServer):
-    ## >>> Custom error handling for application errors.
+    # Custom error handling for application errors.
     def handle_error(self, request, client_address):
         print(f'{ERR}Error in application:')
         import traceback

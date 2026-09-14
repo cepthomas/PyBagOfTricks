@@ -4,11 +4,11 @@ import pdb
 import os
 import threading
 import time
-import pbot_pdb`
+import pbot_pdb
 import plog
 
 
-##### Some experiments with using UDP for the remote pdb protocol. Stale - see pbot_pdb.py.
+##### Playing with using UDP for the remote pdb protocol. Stale - see pbot_pdb.py.
 
 ### Required
 PORT = -1
