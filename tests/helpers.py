@@ -1,7 +1,7 @@
 import sys
 import os
 
-# Handy test helpers. TODO1 need to create the 'out' dir.'
+# Handy test helpers.
 
 # Add file location to python path.
 def add_parent_to_path():
@@ -23,3 +23,8 @@ def init_log(dir, *subdirs, clean=False):
         try: os.remove(log_fn)
         except: pass
     return log_fn
+
+
+# Create the output location.
+dir_path = os.path.join(my_dir(), 'out')
+os.makedirs(dir_path, exist_ok=True)
