@@ -49,8 +49,8 @@ def do_one(scmd):
         # Get server response.
         l.info(f'--- 110')
         sock.settimeout(1) # adjust to taste
-        rcving = True
-        while rcving:
+        receiving = True
+        while receiving:
             try:
                 s = commif.read(256)
                 l.info(f'--- 200 [{s}]')
@@ -58,7 +58,7 @@ def do_one(scmd):
                 else: sresp += s
             except TimeoutError: # Nothing more to read.
                 l.info(f'--- 210')
-                rcving = False
+                receiving = False
 
     except Exception as e:
         l.info(f'{type(e)} [{e}]')

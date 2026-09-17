@@ -54,4 +54,4 @@ Usage - see [test](https://github.com/cepthomas/PyBagOfTricks/blob/main/tests/pp
 
 # Tracer
 Tool for tracing through code, especially function entry/exit.
-The best (only) documentation is to read [the test](https://github.com/cepthomas/PyBagOfTricks/blob/main/tests/test_tracer.py).
+The best (only) documentation is [the test](https://github.com/cepthomas/PyBagOfTricks/blob/main/tests/test_tracer.py).
